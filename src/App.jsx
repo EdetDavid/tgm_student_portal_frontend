@@ -28,18 +28,30 @@ const money = (n) =>
 export default function App() {
   const [showAdmin, setShowAdmin] = useState(["/portal", "/admin"].includes(window.location.pathname.replace(/\/$/, "")));
   const [authenticated, setAuthenticated] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
   useEffect(() => {
     const syncRoute = () => setShowAdmin(["/portal", "/admin"].includes(window.location.pathname.replace(/\/$/, "")));
     window.addEventListener("popstate", syncRoute);
     return () => window.removeEventListener("popstate", syncRoute);
   }, []);
+  useEffect(() => {
+    if (showAdmin) { setAuthChecking(false); return; }
+    api("/api/auth/me/").then(user => {
+      if (user.role === "Student") {
+        const profile = JSON.parse(localStorage.getItem("student_profile") || "{}");
+        localStorage.setItem("student_profile", JSON.stringify({ ...profile, full_name: user.full_name || profile.full_name, email: user.email || profile.email }));
+        setAuthenticated(true);
+      }
+    }).catch(() => {}).finally(() => setAuthChecking(false));
+  }, [showAdmin]);
   function navigate(path) {
     window.history.pushState({}, "", path);
     setShowAdmin(["/portal", "/admin"].includes(path));
   }
   if (showAdmin) return <Admin onStudent={() => navigate("/")} />;
+  if (authChecking) return <main className="portal-entry"><p role="status">Restoring your session...</p></main>;
   if (!authenticated) return <PortalEntry onContinue={() => setAuthenticated(true)} onAdmin={() => navigate("/portal")} />;
-  return <StudentDashboard onLogout={() => setAuthenticated(false)}><StudentPortal /></StudentDashboard>;
+  return <StudentDashboard onLogout={async () => { await api("/api/auth/logout/", { method: "POST", body: "{}" }).catch(() => {}); setAuthenticated(false); }}><StudentPortal /></StudentDashboard>;
 }
 
 function PortalEntry({ onContinue, onAdmin }) {
