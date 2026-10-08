@@ -157,6 +157,8 @@ function StudentPortal() {
     [query, setQuery] = useState(""),
     [courseId, setCourseId] = useState(""),
     [universityId, setUniversityId] = useState(""),
+    [destination, setDestination] = useState(""),
+    [destinationCity, setDestinationCity] = useState(""),
     [region, setRegion] = useState(""),
     [busy, setBusy] = useState(false),
     [result, setResult] = useState(null),
@@ -255,6 +257,8 @@ function StudentPortal() {
       setFormValues({ full_name: "", email: "", phone: "", student_location: "", message: "" });
       setCourseId("");
       setUniversityId("");
+      setDestination("");
+      setDestinationCity("");
       setIntake("");
       setQuery("");
       setCourseListOpen(false);
@@ -546,7 +550,7 @@ function StudentPortal() {
                 <div className="course-offerings-heading"><div><small>AVAILABLE PARTNER LOCATIONS</small><span>Choose a destination below to continue</span></div><MapPin size={16}/></div>
                 <div className="course-offering-list">
                   {chosen.offerings.map((item, index) => (
-                    <button type="button" className={`course-offering-card${String(universityId) === String(item.id) ? " selected" : ""}`} key={`${item.institution}-${item.city}`} onClick={() => setUniversityId(String(item.id))} aria-pressed={String(universityId) === String(item.id)}>
+                    <button type="button" className={`course-offering-card${String(universityId) === String(item.id) ? " selected" : ""}`} key={`${item.institution}-${item.city}`} onClick={() => { setUniversityId(String(item.id)); setDestination(item.country); setDestinationCity(item.city); }} aria-pressed={String(universityId) === String(item.id)}>
                       <img src={campusImages[index % campusImages.length]} alt={`${item.institution} campus`} loading="lazy" />
                       <div><b>{item.institution}</b><span><MapPin size={11}/> {item.city}, {item.country}</span><em>{money(item.price || chosen.price)} / year</em></div>
                     </button>
@@ -580,7 +584,7 @@ function StudentPortal() {
               <label>
                 Study country<span className="required">*</span>
                 <div className="select-shell">
-                  <select name="destination" required defaultValue="">
+                  <select name="destination" required value={destination} onChange={e => setDestination(e.target.value)}>
                     <option value="" disabled>
                       Choose a destination
                     </option>
@@ -593,7 +597,7 @@ function StudentPortal() {
               </label>
               <label>
                 Study city<span className="required">*</span>
-                <input name="destination_city" required maxLength="100" placeholder="e.g. Toronto" />
+                <input name="destination_city" required maxLength="100" placeholder="e.g. Toronto" value={destinationCity} onChange={e => setDestinationCity(e.target.value)} />
               </label>
             </div>
             <div className="section-heading event-heading">
