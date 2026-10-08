@@ -97,6 +97,7 @@ function PortalEntry({ onContinue, onAdmin }) {
       <button className="entry-link" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); }}>{mode === "login" ? "New here? Create an account" : "Already registered? Sign in"}</button>
       {role === "Student" && <button className="entry-link" onClick={onContinue}>Continue as guest for event registration</button>}
     </section>
+    {role === "Student" && <StudentSupport />}
   </main>;
 }
 
