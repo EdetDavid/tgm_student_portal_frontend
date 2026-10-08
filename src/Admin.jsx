@@ -755,9 +755,6 @@ export default function Admin({ onStudent }) {
           <button type="button" className="admin-text-button" onClick={() => { setSignupMode(!signupMode); setLoginError(""); }}>
             {signupMode ? "Already have an account? Sign in" : "Need an account? Sign up"}
           </button>
-          <a className="login-api-link" href="/api/">
-            Open the browsable REST API
-          </a>
         </form>
       </main>
     );
