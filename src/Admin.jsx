@@ -1156,7 +1156,7 @@ export default function Admin({ onStudent }) {
           )}
           {section === "Courses" && (
             <>
-              <form
+              {user.role !== "Counsellor" && <form
                 className="admin-add-form"
                 data-type="course"
                 onSubmit={(e) => saveResource(e)}
@@ -1167,10 +1167,10 @@ export default function Admin({ onStudent }) {
                   <Plus size={15} />
                   {saving ? "Saving..." : "Add course"}
                 </button>
-              </form>
+              </form>}
               <section className="admin-panel">
                 <div className="manage-head">
-                  <h3>Course catalogue</h3>
+                  <div><h3>Course catalogue</h3>{user.role === "Counsellor" && <p className="admin-muted">Read-only catalogue access</p>}</div>
                   <span>{visibleCourses.length} courses</span>
                 </div>
                 <input
@@ -1199,18 +1199,18 @@ export default function Admin({ onStudent }) {
                       >
                         {course.active ? "Active" : "Inactive"}
                       </span>
-                      <button
+                      {user.role !== "Counsellor" && <button
                         className="edit-button"
                         onClick={() => openEditor("course", course)}
                       >
                         Edit
-                      </button>
-                      <button
+                      </button>}
+                      {user.role !== "Counsellor" && <button
                         disabled={saving}
                         onClick={() => toggleCourse(course)}
                       >
                         {course.active ? "Deactivate" : "Reactivate"}
-                      </button>
+                      </button>}
                     </div>
                   ))}
                 </div>
@@ -1239,7 +1239,7 @@ export default function Admin({ onStudent }) {
           )}
           {section === "Events" && (
             <>
-              <form
+              {user.role !== "Counsellor" && <form
                 className="admin-add-form event-form"
                 data-type="event"
                 onSubmit={(e) => saveResource(e)}
@@ -1250,10 +1250,10 @@ export default function Admin({ onStudent }) {
                   <Plus size={15} />
                   {saving ? "Saving..." : "Create event"}
                 </button>
-              </form>
+              </form>}
               <section className="admin-panel">
                 <div className="manage-head">
-                  <h3>Events</h3>
+                  <div><h3>Events</h3>{user.role === "Counsellor" && <p className="admin-muted">Read-only event access</p>}</div>
                   <span>{visibleEvents.length} total</span>
                 </div>
                 <input
@@ -1277,12 +1277,12 @@ export default function Admin({ onStudent }) {
                       <span className="active-label">
                         Capacity {event.capacity}
                       </span>
-                      <button
+                      {user.role !== "Counsellor" && <button
                         className="edit-button"
                         onClick={() => openEditor("event", event)}
                       >
                         Edit
-                      </button>
+                      </button>}
                       <button
                         className="edit-button"
                         onClick={() => {
