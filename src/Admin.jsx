@@ -234,6 +234,9 @@ function CourseFields({ course }) {
           ...new Set([
             "Undergraduate",
             "Postgraduate",
+            "PhD",
+            "Certificate",
+            "Diploma",
             ...(course?.level ? [course.level] : []),
           ]),
         ].map((level) => (
@@ -251,6 +254,9 @@ function CourseFields({ course }) {
         placeholder="Annual tuition (NGN)"
         defaultValue={course?.price}
       />
+      <input aria-label="University" name="institution" maxLength={160} placeholder="University or institution" defaultValue={course?.institution} />
+      <input aria-label="Region" name="region" maxLength={80} placeholder="Study region" defaultValue={course?.region} />
+      <input aria-label="Study country" name="study_country" maxLength={100} placeholder="Study country" defaultValue={course?.study_country} />
       <input
         aria-label="Study city"
         name="study_city"
@@ -601,7 +607,7 @@ export default function Admin({ onStudent }) {
     const fields = new FormData(form);
     const type = editing?.type || form.dataset.type;
     const values = Object.fromEntries(fields.entries());
-    for (const key of ["name", "level", "location", "study_city", "city", "venue"]) {
+    for (const key of ["name", "level", "institution", "region", "study_country", "location", "study_city", "city", "venue"]) {
       if (key in values) {
         values[key] = values[key].trim();
         if (!values[key]) {
