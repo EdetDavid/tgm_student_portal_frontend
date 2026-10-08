@@ -225,6 +225,8 @@ test.describe.serial('Student and admin portal', () => {
     await page.getByRole('textbox', { name: 'Username' }).fill('e2e-admin');
     await page.getByLabel('Password', { exact: true }).fill('E2eOnly934!');
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+    const expected = await (await page.request.get('/api/admin/dashboard/')).json();
     await page.getByRole('button', { name: 'Reports', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Reports', exact: true })).toBeVisible();
     await expect(page.getByRole('img', { name: 'Inquiry status pie chart' })).toBeVisible();
@@ -233,14 +235,14 @@ test.describe.serial('Student and admin portal', () => {
     await expect(page.getByRole('group', { name: 'Potential revenue bar chart' })).toContainText('₦');
     await page.getByRole('button', { name: 'Filter inquiry status by Converted', exact: true }).click();
     await expect(page.getByRole('combobox', { name: 'Inquiry status', exact: true })).toHaveValue('Converted');
-    await expect(page.locator('.admin-stats article').first().locator('strong')).toHaveText('60');
+    await expect(page.locator('.admin-stats article').first().locator('strong')).toHaveText(String(expected.status.find(row => row.status === 'Converted').total));
     await page.getByRole('button', { name: 'Clear filters' }).click();
-    await expect(page.locator('.admin-stats article').first().locator('strong')).toHaveText('242');
+    await expect(page.locator('.admin-stats article').first().locator('strong')).toHaveText(String(expected.total));
     await page.getByRole('group', { name: 'Course demand bar chart' }).getByRole('button', { name: /^Filter by Computer Science,/ }).click();
     await expect(page.getByRole('combobox', { name: 'Course', exact: true })).not.toHaveValue('');
-    await expect(page.locator('.admin-stats article').first().locator('strong')).toHaveText('13');
+    await expect(page.locator('.admin-stats article').first().locator('strong')).toHaveText(String(expected.courses.find(row => row.course__name === 'Computer Science').total));
     await page.getByRole('button', { name: 'Clear filters' }).click();
-    await expect(page.locator('.admin-stats article').first().locator('strong')).toHaveText('242');
+    await expect(page.locator('.admin-stats article').first().locator('strong')).toHaveText(String(expected.total));
     await page.screenshot({ path: 'test-results/admin-reports-desktop.png', fullPage: true });
     await page.setViewportSize({ width: 375, height: 812 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

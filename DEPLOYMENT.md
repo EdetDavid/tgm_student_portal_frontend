@@ -1,7 +1,12 @@
 # Student Portal frontend deployment
 
 Production: https://tgm-student-portal-frontend.vercel.app/.
+Admin portal: https://tgm-student-portal-frontend.vercel.app/admin/.
+Backend: https://tgm-student-portal-backend.vercel.app/.
+API root: https://tgm-student-portal-backend.vercel.app/api/.
 Backend repository: https://github.com/EdetDavid/tgm_education_student_portal.
+
+Use /api/ to browse Django; the bare backend root is not a landing page. Public [courses](https://tgm-student-portal-backend.vercel.app/api/courses/) and [events](https://tgm-student-portal-backend.vercel.app/api/events/) are available without staff login. [ARCHITECTURE.md](ARCHITECTURE.md) includes all four diagrams and explains the server-side access checks.
 
 Use Vite, npm run build and dist as output. Root Directory is empty for this standalone frontend repository. vercel.json points to the deployed backend at https://tgm-student-portal-backend.vercel.app and creates these routes (no frontend API environment variable is required):
 

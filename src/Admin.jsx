@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   PieChart,
   Printer,
+  GraduationCap,
 } from "lucide-react";
 import { api } from "./api.js";
 import ReportCharts from "./ReportCharts.jsx";
@@ -50,6 +51,10 @@ const money = (n) =>
     currency: "NGN",
     maximumFractionDigits: 0,
   }).format(Number(n));
+
+function portalName(role) {
+  return `TGM Education ${role || "Admin"} Portal`;
+}
 
 function queryString(filters, extra = {}) {
   return new URLSearchParams(
@@ -385,8 +390,9 @@ function Editor({ editor, saving, error, onSave, onClose }) {
 export default function Admin({ onStudent }) {
   const [user, setUser] = useState(null);
   const [checking, setChecking] = useState(true);
-  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
+  const [loginForm, setLoginForm] = useState({ username: "", password: "", role: "Admin" });
   const [loginError, setLoginError] = useState("");
+  const [signupMode, setSignupMode] = useState(false);
   const [section, setSection] = useState("Overview");
   const [data, setData] = useState(null);
   const [inquiries, setInquiries] = useState({
@@ -410,6 +416,9 @@ export default function Admin({ onStudent }) {
   const [editorError, setEditorError] = useState("");
   const [notice, setNotice] = useState("");
   const [catalogSearch, setCatalogSearch] = useState("");
+  const [directory, setDirectory] = useState([]);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [newAccessCode, setNewAccessCode] = useState("");
 
   async function refresh() {
     try {
@@ -440,18 +449,20 @@ export default function Admin({ onStudent }) {
   }, []);
 
   useEffect(() => {
-    if (!user || !["Overview", "Reports", "Inquiries"].includes(section)) return;
+    if (!user || !["Overview", "Reports", "Inquiries", "Users", "Students"].includes(section)) return;
     const controller = new AbortController();
     setLoading(true);
     setLoadError("");
     const timer = setTimeout(async () => {
       try {
-        const endpoint = section === "Inquiries" ? "inquiries" : "dashboard";
+        const endpoint = section === "Inquiries" ? "inquiries" : section === "Users" ? "users" : section === "Students" ? "students" : "dashboard";
         const result = await api(
           `/api/admin/${endpoint}/?${queryString(filters, { page, ordering })}`,
           { signal: controller.signal },
         );
         if (section === "Inquiries") setInquiries(result);
+        else if (section === "Users") setDirectory(result.users);
+        else if (section === "Students") setDirectory(result.students);
         else setData(result);
       } catch (error) {
         if (error.name !== "AbortError") {
@@ -487,16 +498,36 @@ export default function Admin({ onStudent }) {
     setLoginError("");
     setSaving(true);
     try {
-      await api("/api/admin/login/", {
+      const login = await api("/api/admin/login/", {
         method: "POST",
         body: JSON.stringify(loginForm),
       });
+      if (login.role === "Student") {
+        onStudent();
+        return;
+      }
       await refresh();
+      setShowOnboarding(true);
     } catch (error) {
       setLoginError(error.message);
     } finally {
       setSaving(false);
     }
+  }
+
+  async function signUp(e) {
+    e.preventDefault();
+    setLoginError("");
+    setSaving(true);
+    const form = new FormData(e.currentTarget);
+    const payload = Object.fromEntries(form.entries());
+    try {
+      const result = await api("/api/auth/signup/", { method: "POST", body: JSON.stringify(payload) });
+      if (result.role === "Student") onStudent();
+      else await refresh();
+      setShowOnboarding(true);
+    } catch (error) { setLoginError(error.message); }
+    finally { setSaving(false); }
   }
 
   async function signOut() {
@@ -510,12 +541,24 @@ export default function Admin({ onStudent }) {
       setEditor(null);
       clearFilters();
       setNotice("");
-      setLoginForm({ username: "", password: "" });
+      setLoginForm({ username: "", password: "", role: "Admin" });
+      setShowOnboarding(false);
     } catch (error) {
       setNotice(error.message);
     } finally {
       setSaving(false);
     }
+  }
+
+  async function updateAccessCode(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api("/api/admin/access-code/", { method: "POST", body: JSON.stringify({ access_code: newAccessCode }) });
+      setNewAccessCode("");
+      setNotice("Super Admin access code updated");
+    } catch (error) { setNotice(error.message); }
+    finally { setSaving(false); }
   }
 
   async function saveInquiry() {
@@ -633,12 +676,12 @@ export default function Admin({ onStudent }) {
         <button className="back-student" onClick={onStudent}>
           ← Student portal
         </button>
-        <form onSubmit={signIn} className="login-card">
+        <form onSubmit={signupMode ? signUp : signIn} className="login-card">
           <div className="admin-lock">
             <ShieldCheck />
           </div>
-          <span className="admin-kicker">STUDENT PORTAL</span>
-          <h1>Admin sign in</h1>
+          <span className="admin-kicker">TGM EDUCATION · {loginForm.role.toUpperCase()} PORTAL</span>
+          <h1>{signupMode ? "Create an account" : "Portal sign in"}</h1>
           {/* <p>Use your Django staff account to manage student inquiries.</p> */}
           {loginError && (
             <div className="admin-error" role="alert">
@@ -646,9 +689,32 @@ export default function Admin({ onStudent }) {
             </div>
           )}
           <label>
+            Sign in as
+            <select
+              name="role"
+              value={loginForm.role}
+              onChange={(e) => setLoginForm({ ...loginForm, role: e.target.value })}
+            >
+              <option>Super Admin</option>
+              <option>Admin</option>
+              <option>Counsellor</option>
+              <option>Student</option>
+            </select>
+          </label>
+          {signupMode && ["Admin", "Counsellor"].includes(loginForm.role) && (
+            <label>Staff ID<input name="staff_id" required maxLength="80" placeholder="e.g. TGM-1042" /></label>
+          )}
+          {signupMode && ["Admin", "Counsellor"].includes(loginForm.role) && (
+            <label>Organisation code<input name="organisation_code" required type="password" /></label>
+          )}
+          {signupMode && loginForm.role === "Super Admin" && (
+            <label>Super Admin access code<input name="access_code" required type="password" /></label>
+          )}
+          <label>
             Username
             <input
               required
+              name="username"
               value={loginForm.username}
               onChange={(e) =>
                 setLoginForm({ ...loginForm, username: e.target.value })
@@ -660,6 +726,7 @@ export default function Admin({ onStudent }) {
             Password
             <input
               required
+              name="password"
               type="password"
               value={loginForm.password}
               onChange={(e) =>
@@ -669,7 +736,10 @@ export default function Admin({ onStudent }) {
             />
           </label>
           <button className="admin-primary" disabled={saving}>
-            {saving ? "Signing in..." : "Sign in"}
+            {saving ? "Please wait..." : signupMode ? "Create account" : "Sign in"}
+          </button>
+          <button type="button" className="admin-text-button" onClick={() => { setSignupMode(!signupMode); setLoginError(""); }}>
+            {signupMode ? "Already have an account? Sign in" : "Need an account? Sign up"}
           </button>
           <a className="login-api-link" href="/api/">
             Open the browsable REST API
@@ -684,6 +754,8 @@ export default function Admin({ onStudent }) {
     ["Inquiries", Users],
     ["Courses", BookOpen],
     ["Events", CalendarDays],
+    ...(user.role === "Super Admin" ? [["Users", Users]] : [["Students", Users]]),
+    ...(user.role === "Super Admin" ? [["Access", ShieldCheck]] : []),
   ];
   const filtered = Object.values(filters).some(Boolean);
   const visibleCourses = courses.filter((course) =>
@@ -699,9 +771,20 @@ export default function Admin({ onStudent }) {
 
   return (
     <div className="admin-shell">
+      {showOnboarding && (
+        <div className="onboarding-backdrop" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+          <div className="onboarding-card">
+            <span className="admin-kicker">WELCOME BACK</span>
+            <h2 id="onboarding-title">A quick tour before you start</h2>
+            <p>Review new inquiries, update follow-up status, manage courses and events, and use Reports to see demand at a glance.</p>
+            <div className="onboarding-role"><b>Your role</b><span>{user.role || "Admin"}</span></div>
+            <button className="admin-primary" type="button" onClick={() => setShowOnboarding(false)}>Go to workspace</button>
+          </div>
+        </div>
+      )}
       <aside className="admin-side">
         <a className="admin-brand" href="/admin/">
-          <span>sp</span> Student Portal <small>ADMIN</small>
+          <span><GraduationCap size={17} /></span> {portalName(user.role)} <small>{user.role?.toUpperCase()}</small>
         </a>
         <div className="admin-nav-label">WORKSPACE</div>
         {nav.map(([name, Icon]) => (
@@ -715,27 +798,24 @@ export default function Admin({ onStudent }) {
             {name}
           </button>
         ))}
-        <a
+        {user.role === "Super Admin" && <a
           className="admin-nav-item admin-api-link"
           href="/api/"
           aria-label="Browse REST API"
         >
           <Code2 size={17} />
           REST API
-        </a>
+        </a>}
         <div className="admin-side-bottom">
           <div className="admin-user">
             <span>{user.username.slice(0, 1).toUpperCase()}</span>
             <div>
               <b>{user.username}</b>
-              <small>Administrator</small>
+              <small>{user.role || "Admin"}</small>
             </div>
           </div>
           <button className="admin-logout" disabled={saving} onClick={signOut}>
             <LogOut size={16} /> Sign out
-          </button>
-          <button className="admin-student-link" onClick={onStudent}>
-            <ArrowLeft size={16} /> Student portal
           </button>
         </div>
       </aside>
@@ -745,13 +825,13 @@ export default function Admin({ onStudent }) {
             <span>Workspace /</span> {section}
           </div>
           <span className="admin-online">
-            <i /> Admin session
+            <i /> {user.role || "Admin"} session
           </span>
         </header>
         <div className="admin-content">
           <div className="admin-heading">
             <div>
-              <span className="admin-kicker">STUDENT PORTAL · MANAGEMENT</span>
+              <span className="admin-kicker">{portalName(user.role).toUpperCase()} · MANAGEMENT</span>
               <h1>{section}</h1>
               <p>
                 {section === "Reports" ? "Visual reports for student interest, follow-up and tuition demand." : section === "Overview"
@@ -827,7 +907,11 @@ export default function Admin({ onStudent }) {
                   </article>
                 ))}
               </div>
-              {section === "Reports" ? <ReportCharts data={data} onFilter={changeFilter} loading={loading} /> : <div className="admin-panels">
+              {section === "Reports" ? <><p className="report-scope">Report scope: {Object.entries(filters).filter(([, value]) => value).map(([key, value]) => {
+                const label = key.replaceAll('_', ' ');
+                const text = key === 'course' ? courses.find(course => String(course.id) === String(value))?.name || value : key === 'event' ? events.find(event => String(event.id) === String(value))?.name || value : value;
+                return `${label}: ${text}`;
+              }).join(' · ') || 'All inquiries'}</p><ReportCharts data={data} onFilter={changeFilter} loading={loading} /></> : <div className="admin-panels">
                 <BarPanel
                   title="Inquiries by course"
                   rows={data.courses}
@@ -1135,6 +1219,23 @@ export default function Admin({ onStudent }) {
                 )}
               </section>
             </>
+          )}
+          {(section === "Users" || section === "Students") && (
+            <section className="admin-panel directory-panel">
+              <div className="manage-head"><div><h3>{section === "Users" ? "User management" : "Registered students"}</h3><p className="admin-muted">{section === "Users" ? "All application accounts and their assigned roles." : "Student records captured by the portal."}</p></div><span>{directory.length} records</span></div>
+              <div className="table-scroll"><table className="inquiry-table"><thead><tr>{section === "Users" ? <><th>USERNAME</th><th>EMAIL</th><th>ROLE</th><th>STATUS</th><th>JOINED</th></> : <><th>NAME</th><th>EMAIL</th><th>PHONE</th><th>LOCATION</th><th>INQUIRIES</th></>}</tr></thead><tbody>{directory.map(item => section === "Users" ? <tr key={item.id}><td><b>{item.username}</b></td><td>{item.email || "—"}</td><td><span className="status-pill">{item.role}</span></td><td>{item.active ? "Active" : "Inactive"}</td><td>{new Date(item.date_joined).toLocaleDateString()}</td></tr> : <tr key={item.id}><td><b>{item.full_name}</b></td><td>{item.email}</td><td>{item.phone}</td><td>{item.location}</td><td>{item.inquiries}</td></tr>)}</tbody></table></div>
+              {!directory.length && <p className="admin-muted">No records found.</p>}
+            </section>
+          )}
+          {section === "Access" && user.role === "Super Admin" && (
+            <section className="admin-panel access-panel">
+              <h3>Super Admin access</h3>
+              <p className="admin-muted">Rotate the secret code required when creating a new Super Admin account.</p>
+              <form onSubmit={updateAccessCode} className="admin-add-form">
+                <input type="password" minLength="8" required value={newAccessCode} onChange={e => setNewAccessCode(e.target.value)} placeholder="New access code" />
+                <button className="admin-primary" disabled={saving}>{saving ? "Saving..." : "Update access code"}</button>
+              </form>
+            </section>
           )}
           {section === "Events" && (
             <>

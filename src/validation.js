@@ -1,4 +1,5 @@
 export const DESTINATIONS = ['United Kingdom', 'United States', 'Canada', 'Australia', 'Ireland', 'Germany', 'France', 'Netherlands']
+export const PROGRAMME_TYPES = ['Undergraduate', 'Postgraduate', 'PhD', 'Certificate', 'Diploma']
 
 export function validateStudentInquiry(data, courses, events) {
   const errors = {}
@@ -14,8 +15,10 @@ export function validateStudentInquiry(data, courses, events) {
   if (location.length > 120 || comma < 1 || !location.slice(0, comma).trim() || location.slice(comma + 1).trim().length < 2) errors.student_location = 'Enter your city and country, for example Lagos, Nigeria.'
   const course = courses.find(item => String(item.id) === String(data.course_id))
   if (!course) errors.course_id = 'Choose an available course.'
+  if (!PROGRAMME_TYPES.includes(data.programme_type)) errors.programme_type = 'Choose a programme type.'
   if (!course?.intake_options.includes(data.intake)) errors.intake = 'Choose an intake offered for this course.'
   if (!DESTINATIONS.includes(data.destination)) errors.destination = 'Choose a study destination.'
+  if (String(data.destination_city || '').trim().length < 2) errors.destination_city = 'Enter the city where you want to study.'
   const event = events.find(item => String(item.id) === String(data.event_id))
   const parts = new Intl.DateTimeFormat('en', { timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date())
   const datePart = type => parts.find(part => part.type === type).value

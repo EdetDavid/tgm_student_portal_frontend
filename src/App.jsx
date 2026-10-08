@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Admin from "./Admin.jsx";
 import { api } from "./api.js";
-import { DESTINATIONS as destinations, validateStudentInquiry } from "./validation.js";
+import { DESTINATIONS as destinations, PROGRAMME_TYPES as programmeTypes, validateStudentInquiry } from "./validation.js";
 import {
   ArrowRight,
   Check,
@@ -12,6 +12,10 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
+  UserRound,
+  ClipboardList,
+  LayoutDashboard,
+  Bell,
 } from "lucide-react";
 
 const money = (n) =>
@@ -22,22 +26,88 @@ const money = (n) =>
   }).format(Number(n));
 
 export default function App() {
-  const [showAdmin, setShowAdmin] = useState(window.location.pathname.replace(/\/$/, "") === "/admin");
+  const [showAdmin, setShowAdmin] = useState(["/portal", "/admin"].includes(window.location.pathname.replace(/\/$/, "")));
+  const [authenticated, setAuthenticated] = useState(false);
   useEffect(() => {
-    const syncRoute = () => setShowAdmin(window.location.pathname.replace(/\/$/, "") === "/admin");
+    const syncRoute = () => setShowAdmin(["/portal", "/admin"].includes(window.location.pathname.replace(/\/$/, "")));
     window.addEventListener("popstate", syncRoute);
     return () => window.removeEventListener("popstate", syncRoute);
   }, []);
   function navigate(path) {
     window.history.pushState({}, "", path);
-    setShowAdmin(path === "/admin");
+    setShowAdmin(["/portal", "/admin"].includes(path));
   }
-  return showAdmin
-    ? <Admin onStudent={() => navigate("/")} />
-    : <StudentPortal onAdmin={() => navigate("/admin")} />;
+  if (showAdmin) return <Admin onStudent={() => navigate("/")} />;
+  if (!authenticated) return <PortalEntry onContinue={() => setAuthenticated(true)} onAdmin={() => navigate("/portal")} />;
+  return <StudentDashboard onLogout={() => setAuthenticated(false)}><StudentPortal /></StudentDashboard>;
 }
 
-function StudentPortal({ onAdmin }) {
+function PortalEntry({ onContinue, onAdmin }) {
+  const [role, setRole] = useState("Student");
+  const [mode, setMode] = useState("login");
+  const [form, setForm] = useState({ username: "", password: "", email: "", full_name: "" });
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function submit(e) {
+    e.preventDefault(); setError(""); setBusy(true);
+    try {
+      const body = { ...form, role };
+      const result = await api(mode === "signup" ? "/api/auth/signup/" : "/api/admin/login/", { method: "POST", body: JSON.stringify(body) });
+      if (role === "Student") {
+        const existing = JSON.parse(localStorage.getItem("student_profile") || "{}");
+        localStorage.setItem("student_profile", JSON.stringify({ ...existing, full_name: result.full_name || existing.full_name || form.full_name, email: result.email || existing.email || form.email }));
+        onContinue();
+      } else onAdmin();
+    } catch (e) { setError(e.message); } finally { setBusy(false); }
+  }
+  return <main className="portal-entry">
+    {role === "Student" && <section className="entry-hero"><div><span className="eyebrow"><Sparkles size={13}/> YOUR NEXT CHAPTER STARTS HERE</span><h2>Find your place<br/>in the <em>world.</em></h2><p>Start your study abroad journey with TGM Education.</p></div><Globe2 size={78} strokeWidth={1.1}/></section>}
+    <section className="portal-entry-card">
+      <div className="admin-lock"><GraduationCap size={23} /></div>
+      <span className="admin-kicker">TGM EDUCATION</span>
+      <h1>Welcome to Student Portal</h1>
+      <p>Sign in to continue to your space, or choose a role to begin.</p>
+      <label>Continue as<select value={role} onChange={e => setRole(e.target.value)}><option>Student</option><option>Admin</option><option>Counsellor</option><option>Super Admin</option></select></label>
+      {error && <div className="entry-error" role="alert">{error}</div>}
+      <form onSubmit={submit} className="entry-form">
+        {mode === "signup" && role === "Student" && <label>Full name<input required value={form.full_name} onChange={e => setForm({...form, full_name:e.target.value})} /></label>}
+        {mode === "signup" && role === "Student" && <label>Email<input required type="email" value={form.email} onChange={e => setForm({...form, email:e.target.value})} /></label>}
+        {mode === "signup" && ["Admin", "Counsellor"].includes(role) && <label>Staff ID<input required value={form.staff_id || ""} onChange={e => setForm({...form, staff_id:e.target.value})} /></label>}
+        {mode === "signup" && ["Admin", "Counsellor"].includes(role) && <label>Organisation code<input required type="password" value={form.organisation_code || ""} onChange={e => setForm({...form, organisation_code:e.target.value})} /></label>}
+        {mode === "signup" && role === "Super Admin" && <label>Super Admin access code<input required type="password" value={form.access_code || ""} onChange={e => setForm({...form, access_code:e.target.value})} /></label>}
+        <label>Username<input required value={form.username} onChange={e => setForm({...form, username:e.target.value})} /></label>
+        <label>Password<input required minLength="8" type="password" value={form.password} onChange={e => setForm({...form, password:e.target.value})} /></label>
+        <button className="entry-primary" disabled={busy}>{busy ? "Please wait..." : mode === "signup" ? "Create account" : "Sign in"} <ArrowRight size={16} /></button>
+      </form>
+      {role !== "Student" && <button className="entry-link" onClick={onAdmin}>Use the staff portal</button>}
+      <button className="entry-link" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); }}>{mode === "login" ? "New here? Create an account" : "Already registered? Sign in"}</button>
+      {role === "Student" && <button className="entry-link" onClick={onContinue}>Continue as guest for event registration</button>}
+    </section>
+  </main>;
+}
+
+function StudentDashboard({ children, onLogout }) {
+  const [view, setView] = useState("Apply");
+  const [profile, setProfile] = useState(() => JSON.parse(localStorage.getItem("student_profile") || '{"full_name":"","email":"","phone":"","student_location":""}'));
+  const [saved, setSaved] = useState(false);
+  const reference = localStorage.getItem("student_application_reference");
+  const application = JSON.parse(localStorage.getItem("student_application_details") || "null");
+  function saveProfile(e) { e.preventDefault(); localStorage.setItem("student_profile", JSON.stringify(profile)); setSaved(true); setTimeout(() => setSaved(false), 2500); }
+  return <div className="student-app-shell">
+    <aside className="student-side"><a className="student-brand" href="/"><span><GraduationCap size={18}/></span><b>TGM Education <em>|</em> Student</b></a><small className="student-nav-label">MY SPACE</small>
+      {[['Overview', LayoutDashboard], ['Apply', ClipboardList], ['Profile', UserRound], ['Application status', Bell]].map(([name, Icon]) => <button key={name} className={`student-nav-item ${view === name ? 'active' : ''}`} onClick={() => setView(name)}><Icon size={17}/>{name}</button>)}
+      <div className="student-side-bottom"><button className="student-signout" onClick={onLogout}>Sign out</button></div>
+    </aside>
+    <main className="student-workspace"><header className="student-workspace-top"><div><span>MY SPACE /</span> {view}</div><span className="student-online"><i/> Signed in</span></header>
+      {view === 'Overview' && <section className="student-dashboard-home"><div className="student-welcome"><small>STUDENT DASHBOARD</small><h1>Keep your study plans moving.</h1><p>Search courses, submit an application and follow the next steps from one place.</p><button className="entry-primary" onClick={() => setView('Apply')}>Start an application <ArrowRight size={16}/></button></div><div className="student-dashboard-cards"><article><ClipboardList/><b>Applications</b><strong>{reference ? '1 active' : 'No applications yet'}</strong><button onClick={() => setView(reference ? 'Application status' : 'Apply')}>{reference ? 'Track application' : 'Apply now'}</button></article><article><UserRound/><b>Profile</b><strong>Keep your details up to date</strong><button onClick={() => setView('Profile')}>Update profile</button></article></div></section>}
+      {view === 'Apply' && children}
+      {view === 'Profile' && <section className="student-panel"><div className="student-panel-heading"><div><small>YOUR DETAILS</small><h1>Profile</h1><p>Keep your contact details current so our counsellors can reach you.</p></div></div><form className="student-profile-form" onSubmit={saveProfile}><label>Full name<input required value={profile.full_name} onChange={e => setProfile({...profile, full_name:e.target.value})}/></label><label>Email address<input required type="email" value={profile.email} onChange={e => setProfile({...profile, email:e.target.value})}/></label><label>Phone number<input required value={profile.phone} onChange={e => setProfile({...profile, phone:e.target.value})}/></label><label>Current city and country<input required placeholder="e.g. Lagos, Nigeria" value={profile.student_location} onChange={e => setProfile({...profile, student_location:e.target.value})}/></label><button className="entry-primary">{saved ? 'Profile saved' : 'Save changes'}</button></form></section>}
+      {view === 'Application status' && <section className="student-panel"><div className="student-panel-heading"><small>APPLICATION TRACKER</small><h1>Application status</h1><p>Follow your progress and know what happens next.</p></div>{reference ? <><div className="application-timeline"><div className="timeline-step done"><b>Interest submitted</b><span>Reference: {reference}</span></div><div className="timeline-step"><b>Counsellor review</b><span>Our team will contact you with guidance.</span></div><div className="timeline-step"><b>Application and visa support</b><span>Documents and next steps will appear here.</span></div></div><div className="application-details"><div className="details-heading"><div><small>SUBMISSION RECORD</small><h2>Application details</h2></div><span className="status-badge">Submitted</span></div><dl><dt>Reference</dt><dd>{reference}</dd><dt>Applicant</dt><dd>{application?.full_name || profile.full_name || 'Not provided'}</dd><dt>Email</dt><dd>{application?.email || profile.email || 'Not provided'}</dd><dt>Phone</dt><dd>{application?.phone || profile.phone || 'Not provided'}</dd><dt>Course</dt><dd>{application?.course_name || 'Selected course'}</dd><dt>Programme type</dt><dd>{application?.programme_type || 'Not provided'}</dd><dt>Intake</dt><dd>{application?.intake || 'Not provided'}</dd><dt>Study destination</dt><dd>{application?.destination_city ? `${application.destination_city}, ${application.destination}` : application?.destination || 'Not provided'}</dd><dt>Event</dt><dd>{application?.event_name || 'Selected event'}</dd><dt>Message</dt><dd>{application?.message || 'No message added'}</dd></dl></div></> : <div className="student-empty"><ClipboardList/><b>No application yet</b><span>Start by telling us what you want to study.</span><button className="entry-primary" onClick={() => setView('Apply')}>Start application</button></div>}</section>}
+    </main>
+  </div>;
+}
+
+function StudentPortal() {
   const [courses, setCourses] = useState([]),
     [events, setEvents] = useState([]),
     [query, setQuery] = useState(""),
@@ -45,8 +115,9 @@ function StudentPortal({ onAdmin }) {
     [busy, setBusy] = useState(false),
     [result, setResult] = useState(null),
     [error, setError] = useState("");
+  const savedProfile = JSON.parse(localStorage.getItem("student_profile") || "{}");
   const [formValues, setFormValues] = useState({
-    full_name: "", email: "", phone: "", student_location: "", message: "",
+    full_name: savedProfile.full_name || "", email: savedProfile.email || "", phone: savedProfile.phone || "", student_location: savedProfile.student_location || "", message: "",
   });
   const [courseListOpen, setCourseListOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -124,6 +195,9 @@ function StudentPortal({ onAdmin }) {
         body: JSON.stringify(data),
       });
       setResult(body);
+      localStorage.setItem("student_application_reference", body.reference);
+      localStorage.setItem("student_profile", JSON.stringify({ full_name: data.full_name, email: data.email, phone: data.phone, student_location: data.student_location }));
+      localStorage.setItem("student_application_details", JSON.stringify({ ...data, course_name: chosen?.name, event_name: events.find(item => String(item.id) === String(data.event_id))?.name }));
       formElement.reset();
       setFormValues({ full_name: "", email: "", phone: "", student_location: "", message: "" });
       setCourseId("");
@@ -157,7 +231,6 @@ function StudentPortal({ onAdmin }) {
           <a className="help-link" href="mailto:info@tgmeducation.com">
             Need help?
           </a>
-          <button className="admin-entry" onClick={onAdmin}>Admin</button>
         </div>
       </header>
       <main id="top">
@@ -211,10 +284,6 @@ function StudentPortal({ onAdmin }) {
               <div className="step-label">
                 STUDENT INTEREST FORM <span>•</span> 2 MIN
               </div>
-              <h2>Let’s get to know you.</h2>
-              <p>
-                Share a few details and we’ll connect you with the right course.
-              </p>
             </div>
             <div className="progress">
               <span></span>
@@ -361,7 +430,7 @@ function StudentPortal({ onAdmin }) {
                       setCourseListOpen(false);
                     }}
                   >
-                    <span><b>{course.name}</b><small>{course.level} · {course.location}</small></span>
+                    <span><b>{course.name}</b><small>{course.level}</small></span>
                     <strong>{money(course.price)}<small> / year</small></strong>
                   </button>
                 )) : <p className="no-courses">No courses match “{query}”. Try another search.</p>}
@@ -388,7 +457,7 @@ function StudentPortal({ onAdmin }) {
                   </option>
                   {visible.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} · {c.level} · {c.location} · {money(c.price)}
+                      {c.name} · {money(c.price)}
                       /year
                     </option>
                   ))}
@@ -404,7 +473,7 @@ function StudentPortal({ onAdmin }) {
                 <span>
                   <b>{chosen.name}</b>
                   <small>
-                    {chosen.level} · {chosen.location}
+                    Choose the programme type and study location below
                   </small>
                 </span>
                 <strong>
@@ -414,6 +483,16 @@ function StudentPortal({ onAdmin }) {
               </div>
             )}
             <div className="grid two compact">
+              <label>
+                Programme type<span className="required">*</span>
+                <div className="select-shell">
+                  <select name="programme_type" required defaultValue="">
+                    <option value="" disabled>Choose a programme type</option>
+                    {programmeTypes.map(type => <option key={type}>{type}</option>)}
+                  </select>
+                  <ChevronDown size={17} />
+                </div>
+              </label>
               <label>
                 Preferred intake<span className="required">*</span>
                 <div className="select-shell">
@@ -427,7 +506,7 @@ function StudentPortal({ onAdmin }) {
                 </div>
               </label>
               <label>
-                Preferred study destination<span className="required">*</span>
+                Study country<span className="required">*</span>
                 <div className="select-shell">
                   <select name="destination" required defaultValue="">
                     <option value="" disabled>
@@ -439,6 +518,10 @@ function StudentPortal({ onAdmin }) {
                   </select>
                   <ChevronDown size={17} />
                 </div>
+              </label>
+              <label>
+                Study city<span className="required">*</span>
+                <input name="destination_city" required maxLength="100" placeholder="e.g. Toronto" />
               </label>
             </div>
             <div className="section-heading event-heading">

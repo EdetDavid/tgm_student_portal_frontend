@@ -31,7 +31,7 @@ function PieReport({ title, eyebrow, rows, field, onSelect }) {
         </circle>)}
         <text x="110" y="106" textAnchor="middle" className="pie-number">{count(selected?.value ?? total)}</text>
         <text x="110" y="130" textAnchor="middle" className="pie-caption">{selected ? `${(selected.fraction * 100).toFixed(1)}% of total` : 'total inquiries'}</text>
-      </svg><div className="pie-legend">{segments.map((segment, index) => <button type="button" key={segment.label} onClick={() => onSelect(segment.label)}
+      </svg><div className="pie-legend">{segments.length > 5 && <p className="legend-scroll-hint">{segments.length} categories · scroll to see all</p>}{segments.map((segment, index) => <button type="button" key={segment.label} onClick={() => onSelect(segment.label)}
         onMouseEnter={() => setActive(segment.label)} onMouseLeave={() => setActive(null)} onFocus={() => setActive(segment.label)} onBlur={() => setActive(null)}
         aria-label={`Filter ${title.toLowerCase()} by ${segment.label}`}>
         <span className="legend-dot" style={{ background: colorFor(segment.label, index) }} /><span className="legend-label">{segment.label}</span>
@@ -49,7 +49,7 @@ function CourseBars({ title, eyebrow, courses, metric, onSelect }) {
   const [active, setActive] = useState(null)
   return <section className="report-card bar-report">
     <header><span className="report-eyebrow">{eyebrow}</span><h3>{title}</h3><p>{metric === 'revenue' ? 'Matching inquiries × current annual tuition. Not collected revenue.' : 'Courses ranked by matching inquiries. Select a bar to filter.'}</p></header>
-    {!rows.length ? <div className="report-empty">No matching inquiries for this report.</div> : <svg viewBox={`0 0 650 ${height}`} role="group" aria-label={`${title} bar chart`} className="report-bars">
+    {!rows.length ? <div className="report-empty">No matching inquiries for this report.</div> : <><svg viewBox={`0 0 650 ${height}`} role="group" aria-label={`${title} bar chart`} className="report-bars">
       {[0, 1, 2, 3, 4].map(tick => <g key={tick}><line x1={205 + tick * 85} x2={205 + tick * 85} y1="24" y2={height - 10} stroke="#e9efeb" />
         <text x={205 + tick * 85} y="14" textAnchor="middle" className="bar-axis">{metric === 'revenue' ? `₦${compact(maximum * tick / 4)}` : count(maximum * tick / 4)}</text></g>)}
       {rows.map((row, index) => <g key={row.course_id} className="report-bar-row" role="button" tabIndex="0" aria-label={`Filter by ${row.course__name}, ${format(row.value)}`}
@@ -61,7 +61,9 @@ function CourseBars({ title, eyebrow, courses, metric, onSelect }) {
         <rect x="205" y={33 + index * 32} width={row.value / maximum * 340} height="19" rx="5" fill={active === row.course_id ? '#185440' : metric === 'revenue' ? '#498fc1' : '#24866a'} />
         <text x="557" y={46 + index * 32} className="bar-value">{format(row.value)}</text>
       </g>)}
-    </svg>}
+    </svg><div className="mobile-course-bars" role="group" aria-label={`${title} bar chart`}>{rows.map(row => <button key={row.course_id} type="button" onClick={() => onSelect(String(row.course_id))} aria-label={`Filter by ${row.course__name}, ${format(row.value)}`}>
+      <span className="mobile-bar-heading"><span>{row.course__name}</span><b>{format(row.value)}</b></span><span className="mobile-bar-track"><span style={{ width: `${row.value / maximum * 100}%`, background: metric === 'revenue' ? '#498fc1' : '#24866a' }} /></span>
+    </button>)}</div></>}
   </section>
 }
 
