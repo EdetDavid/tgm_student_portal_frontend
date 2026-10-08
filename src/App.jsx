@@ -422,7 +422,7 @@ function StudentPortal() {
                   setIntake("");
                 }}
                 maxLength={200}
-                placeholder="Search courses by name, level or city..."
+                placeholder="Search courses by name or programme level..."
               />
               <span>{searching ? 'Searching...' : `${visible.length} courses`}</span>
             </div>
