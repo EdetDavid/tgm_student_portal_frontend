@@ -156,6 +156,7 @@ function StudentPortal() {
     [events, setEvents] = useState([]),
     [query, setQuery] = useState(""),
     [courseId, setCourseId] = useState(""),
+    [universityId, setUniversityId] = useState(""),
     [region, setRegion] = useState(""),
     [busy, setBusy] = useState(false),
     [result, setResult] = useState(null),
@@ -230,6 +231,11 @@ function StudentPortal() {
     const data = Object.fromEntries(form.entries());
     data.course_id = Number(data.course_id);
     data.event_id = Number(data.event_id);
+    data.university_id = universityId ? Number(universityId) : null;
+    if (chosen?.offerings?.length && !universityId) {
+      setError("Choose a university where you would like to study.");
+      return;
+    }
     const validation = validateStudentInquiry(data, [...matches, ...courses], events);
     if (Object.keys(validation).length) {
       setError(Object.values(validation).join(" "));
@@ -248,6 +254,7 @@ function StudentPortal() {
       formElement.reset();
       setFormValues({ full_name: "", email: "", phone: "", student_location: "", message: "" });
       setCourseId("");
+      setUniversityId("");
       setIntake("");
       setQuery("");
       setCourseListOpen(false);
@@ -475,6 +482,7 @@ function StudentPortal() {
                     key={course.id}
                     onClick={() => {
                       setCourseId(String(course.id));
+                      setUniversityId("");
                       setIntake("");
                       setQuery(course.name);
                       setCourseListOpen(false);
@@ -496,6 +504,7 @@ function StudentPortal() {
                   onFocus={() => setCourseListOpen(true)}
                   onChange={(e) => {
                     setCourseId(e.target.value);
+                    setUniversityId("");
                     setIntake("");
                     const course = courses.find((item) => String(item.id) === e.target.value);
                     if (course) setQuery(course.name);
@@ -537,10 +546,10 @@ function StudentPortal() {
                 <div className="course-offerings-heading"><div><small>AVAILABLE PARTNER LOCATIONS</small><span>Choose a destination below to continue</span></div><MapPin size={16}/></div>
                 <div className="course-offering-list">
                   {chosen.offerings.map((item, index) => (
-                    <article className="course-offering-card" key={`${item.institution}-${item.city}`}>
+                    <button type="button" className={`course-offering-card${String(universityId) === String(item.id) ? " selected" : ""}`} key={`${item.institution}-${item.city}`} onClick={() => setUniversityId(String(item.id))} aria-pressed={String(universityId) === String(item.id)}>
                       <img src={campusImages[index % campusImages.length]} alt={`${item.institution} campus`} loading="lazy" />
-                      <div><b>{item.institution}</b><span><MapPin size={11}/> {item.city}, {item.country}</span></div>
-                    </article>
+                      <div><b>{item.institution}</b><span><MapPin size={11}/> {item.city}, {item.country}</span><em>{money(item.price || chosen.price)} / year</em></div>
+                    </button>
                   ))}
                 </div>
               </div>
