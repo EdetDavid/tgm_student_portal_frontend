@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Build output and Vite cache
+dist/
+.vite/
+
+# Local environment variables
+.env
+.env.*
+!.env.example
+
+# Test output
+coverage/
+playwright-report/
+test-results/

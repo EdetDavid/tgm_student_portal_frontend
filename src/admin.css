@@ -1,0 +1,45 @@
+.admin-filters { background: #fff; border: 1px solid #e1e8e4; border-radius: 10px; padding: 16px; margin-bottom: 18px; }
+.admin-filters .admin-search { max-width: none; margin-bottom: 12px; }
+.filter-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.filter-grid label { font-size: 11px; color: #52675b; }
+.filter-grid input, .filter-grid select { width: 100%; height: 37px; margin-top: 6px; border: 1px solid #dce5df; border-radius: 6px; padding: 0 9px; background: white; font: inherit; }
+.admin-text-button { border: 0; background: none; color: #247454; padding: 8px 0 0; cursor: pointer; font: 600 11px 'DM Sans', sans-serif; }
+.sort-button { font: inherit; letter-spacing: inherit; color: inherit; border: 0; padding: 0; background: none; cursor: pointer; }
+.inquiry-order { display: flex; align-items: center; gap: 8px; font-size: 11px; }
+.inquiry-tools > span { margin-right: auto; margin-left: 0; }
+.admin-panels { margin-bottom: 18px; }
+.tuition-total { font: 700 25px Manrope, sans-serif; color: #254638; }
+.trend-chart { width: 100%; height: auto; min-height: 150px; }
+.trend-chart text { fill: #7a8f81; font: 10px 'DM Sans', sans-serif; }
+.revenue-table { min-width: 480px; }
+.revenue-table tbody tr { cursor: default; }
+.intake-fields { flex-basis: 100%; min-width: 0; border: 1px solid #e1e8e4; border-radius: 6px; padding: 10px; display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.intake-fields legend { color: #6c7a72; font-size: 10px; padding: 0 5px; }
+.intake-fields label, .course-active { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #53675a; }
+.intake-fields input, .course-active input { width: 14px; height: 14px; min-width: 0; flex: none; accent-color: #20785a; }
+.course-active { flex-basis: 100%; }
+.resource-editor .admin-add-form { border: 0; padding: 18px 0; }
+.resource-editor .admin-add-form > input, .resource-editor .admin-add-form > select { flex-basis: 100%; }
+.resource-editor .admin-add-form > .admin-primary, .resource-editor .admin-error { width: 100%; }
+.catalog-search { width: 100%; border: 1px solid #e1e8e4; border-radius: 6px; margin-top: 14px; height: 36px; padding: 0 10px; font-size: 11px; }
+.manage-row > .edit-button { color: #256f50; background: #eaf5ee; }
+.manage-row .inactive-label { color: #93847a; }
+.manage-row > div { min-width: 0; }
+.admin-api-link { text-decoration: none; }
+.login-api-link { display: block; margin-top: 18px; text-align: center; font-size: 11px; color: #347658; }
+.admin-brand { font-size: 11px; }
+.inquiry-table tr:focus-visible, .admin-shell button:focus-visible, .admin-shell a:focus-visible { outline: 2px solid #20785a; outline-offset: 2px; }
+@media (max-width: 800px) {
+  .admin-brand { font-size: 0; }
+  .admin-student-link { display: flex; font-size: 0; justify-content: center; }
+  .filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .admin-heading { gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+  .admin-filters { padding: 12px; }
+  .filter-grid { grid-template-columns: minmax(0, 1fr); }
+  .manage-row { flex-wrap: wrap; }
+  .manage-row > div { flex-basis: calc(100% - 32px); }
+  .manage-row > span { margin-right: auto; }
+  .intake-fields input { flex-basis: auto; }
+}
