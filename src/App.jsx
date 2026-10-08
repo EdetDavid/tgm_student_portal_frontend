@@ -209,8 +209,8 @@ function StudentPortal() {
     return () => { clearTimeout(timer); controller.abort(); };
   }, [query, courseListOpen]);
   const sourceCourses = query.trim() ? matches : courses;
-  const visible = region ? sourceCourses.filter(course => course.region === region) : sourceCourses;
-  const regions = [...new Set(courses.map(course => course.region).filter(Boolean))].sort();
+  const visible = region ? sourceCourses.filter(course => (course.offerings || []).some(item => item.region === region)) : sourceCourses;
+  const regions = [...new Set(courses.flatMap(course => (course.offerings || []).map(item => item.region)))].sort();
   const chosen = matches.find((c) => String(c.id) === String(courseId)) || courses.find((c) => String(c.id) === String(courseId));
   async function submit(e) {
     e.preventDefault();
@@ -471,7 +471,7 @@ function StudentPortal() {
                       setCourseListOpen(false);
                     }}
                   >
-                    <span><b>{course.name}</b><small>{course.institution}</small></span>
+                    <span><b>{course.name}</b><small>{(course.offerings || []).slice(0, 2).map(item => item.institution).join(" · ")}</small></span>
                     <strong>{money(course.price)}<small> / year</small></strong>
                   </button>
                 )) : <p className="no-courses">No courses match “{query}”. Try another search.</p>}
@@ -521,6 +521,18 @@ function StudentPortal() {
                   {money(chosen.price)}
                   <small> / year</small>
                 </strong>
+              </div>
+            )}
+            {chosen?.offerings?.length > 0 && (
+              <div className="course-offerings">
+                <small>AVAILABLE STUDY LOCATIONS</small>
+                <div className="course-offering-list">
+                  {chosen.offerings.map(item => (
+                    <span key={`${item.institution}-${item.city}`}>
+                      {item.institution} · {item.city}, {item.country}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
             <div className="grid two compact">
