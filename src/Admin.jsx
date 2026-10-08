@@ -253,11 +253,11 @@ function CourseFields({ course }) {
       />
       <input
         aria-label="Study city"
-        name="location"
+        name="study_city"
         required
         maxLength={100}
         placeholder="Study city"
-        defaultValue={course?.location}
+        defaultValue={course?.study_city || course?.location}
       />
       <fieldset className="intake-fields">
         <legend>Available intakes (choose at least one)</legend>
@@ -589,7 +589,7 @@ export default function Admin({ onStudent }) {
     const fields = new FormData(form);
     const type = editing?.type || form.dataset.type;
     const values = Object.fromEntries(fields.entries());
-    for (const key of ["name", "level", "location", "city", "venue"]) {
+    for (const key of ["name", "level", "location", "study_city", "city", "venue"]) {
       if (key in values) {
         values[key] = values[key].trim();
         if (!values[key]) {
@@ -601,6 +601,8 @@ export default function Admin({ onStudent }) {
       }
     }
     if (type === "course") {
+      // Keep the legacy location field in sync with the model's explicit city.
+      values.location = values.study_city;
       values.intakes = fields.getAll("intakes");
       values.active = editing ? fields.has("active") : true;
       if (!values.intakes.length) {
