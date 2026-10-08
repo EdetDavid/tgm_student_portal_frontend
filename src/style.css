@@ -48,3 +48,16 @@
   .form-wrap { margin-left: 0; margin-right: 0; }
   .course-offering-list { display: grid; grid-template-columns: 1fr; }
 }
+
+.course-offerings { margin-top: 10px; padding: 14px; border: 1px solid #dfece5; border-radius: 12px; background: #fbfdfc; }
+.course-offerings-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; color: #398263; }
+.course-offerings-heading small, .course-offerings-heading span { display: block; }
+.course-offerings-heading small { font-size: 8px; letter-spacing: .1em; font-weight: 800; }
+.course-offerings-heading span { margin-top: 3px; color: #899991; font-size: 9px; }
+.course-offering-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 11px; }
+.course-offering-card { display: flex; min-width: 0; gap: 8px; align-items: center; padding: 7px; border: 1px solid #e3ece7; border-radius: 9px; background: #fff; }
+.course-offering-card img { width: 42px; height: 42px; flex: 0 0 42px; object-fit: cover; border-radius: 7px; }
+.course-offering-card b, .course-offering-card span { display: block; }
+.course-offering-card b { overflow: hidden; color: #315044; font-size: 9px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.course-offering-card span { display: flex; align-items: center; gap: 3px; margin-top: 4px; color: #83938b; font-size: 8px; }
+@media (max-width: 560px) { .course-offering-list { grid-template-columns: 1fr; } }

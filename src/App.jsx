@@ -27,6 +27,14 @@ const money = (n) =>
     maximumFractionDigits: 0,
   }).format(Number(n));
 
+const campusImages = [
+  "https://images.unsplash.com/photo-1564981797816-1043664bf78d?auto=format&fit=crop&w=480&q=80",
+  "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=480&q=80",
+  "https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?auto=format&fit=crop&w=480&q=80",
+  "https://images.unsplash.com/photo-1541339907198-e08756್ಡ?auto=format&fit=crop&w=480&q=80",
+  "https://images.unsplash.com/photo-1606761568499-6d2451b23c66?auto=format&fit=crop&w=480&q=80",
+];
+
 export default function App() {
   const [showAdmin, setShowAdmin] = useState(["/portal", "/admin"].includes(window.location.pathname.replace(/\/$/, "")));
   const [authenticated, setAuthenticated] = useState(false);
@@ -526,12 +534,13 @@ function StudentPortal() {
             )}
             {chosen?.offerings?.length > 0 && (
               <div className="course-offerings">
-                <small>AVAILABLE STUDY LOCATIONS</small>
+                <div className="course-offerings-heading"><div><small>AVAILABLE PARTNER LOCATIONS</small><span>Choose a destination below to continue</span></div><MapPin size={16}/></div>
                 <div className="course-offering-list">
-                  {chosen.offerings.map(item => (
-                    <span key={`${item.institution}-${item.city}`}>
-                      {item.institution} · {item.city}, {item.country}
-                    </span>
+                  {chosen.offerings.map((item, index) => (
+                    <article className="course-offering-card" key={`${item.institution}-${item.city}`}>
+                      <img src={campusImages[index % campusImages.length]} alt={`${item.institution} campus`} loading="lazy" />
+                      <div><b>{item.institution}</b><span><MapPin size={11}/> {item.city}, {item.country}</span></div>
+                    </article>
                   ))}
                 </div>
               </div>
