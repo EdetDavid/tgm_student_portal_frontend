@@ -174,6 +174,7 @@ function StudentPortal() {
   const [matches, setMatches] = useState([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
+  const [portalOptions, setPortalOptions] = useState({ programme_type: [], destination: [], region: [] });
   function updateField(event) {
     const { name, value } = event.target;
     setFormValues((current) => ({ ...current, [name]: value }));
@@ -182,12 +183,14 @@ function StudentPortal() {
     setLoading(true);
     setLoadError("");
     try {
-      const [courseData, eventData] = await Promise.all([
+      const [courseData, eventData, optionData] = await Promise.all([
         api("/api/courses/", signal ? { signal } : {}),
         api("/api/events/", signal ? { signal } : {}),
+        api("/api/options/", signal ? { signal } : {}),
       ]);
       setCourses(courseData.courses);
       setEvents(eventData.events);
+      setPortalOptions(optionData);
     } catch (error) {
       if (error.name !== "AbortError") setLoadError("Courses and events could not load. Check that Django is running and try again.");
     } finally {
@@ -222,7 +225,7 @@ function StudentPortal() {
   }, [query, courseListOpen]);
   const sourceCourses = query.trim() ? matches : courses;
   const visible = region ? sourceCourses.filter(course => (course.offerings || []).some(item => item.region === region)) : sourceCourses;
-  const regions = [...new Set(courses.flatMap(course => (course.offerings || []).map(item => item.region)))].sort();
+  const regions = portalOptions.region.length ? portalOptions.region : [...new Set(courses.flatMap(course => (course.offerings || []).map(item => item.region)))].sort();
   const chosen = matches.find((c) => String(c.id) === String(courseId)) || courses.find((c) => String(c.id) === String(courseId));
   async function submit(e) {
     e.preventDefault();
@@ -238,7 +241,10 @@ function StudentPortal() {
       setError("Choose a university where you would like to study.");
       return;
     }
-    const validation = validateStudentInquiry(data, [...matches, ...courses], events);
+    const validation = validateStudentInquiry(data, [...matches, ...courses], events, {
+      destinations: portalOptions.destination,
+      programmeTypes: portalOptions.programme_type,
+    });
     if (Object.keys(validation).length) {
       setError(Object.values(validation).join(" "));
       return;
@@ -564,7 +570,7 @@ function StudentPortal() {
                 <div className="select-shell">
                   <select name="programme_type" required defaultValue="">
                     <option value="" disabled>Choose a programme type</option>
-                    {programmeTypes.map(type => <option key={type}>{type}</option>)}
+                    {portalOptions.programme_type.map(type => <option key={type}>{type}</option>)}
                   </select>
                   <ChevronDown size={17} />
                 </div>
@@ -588,7 +594,7 @@ function StudentPortal() {
                     <option value="" disabled>
                       Choose a destination
                     </option>
-                    {destinations.map((d) => (
+                    {portalOptions.destination.map((d) => (
                       <option key={d}>{d}</option>
                     ))}
                   </select>
