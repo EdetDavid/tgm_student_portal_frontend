@@ -16,6 +16,8 @@ import {
   ClipboardList,
   LayoutDashboard,
   Bell,
+  MessageCircle,
+  Send,
 } from "lucide-react";
 
 const money = (n) =>
@@ -115,8 +117,29 @@ function StudentDashboard({ children, onLogout }) {
       {view === 'Apply' && children}
       {view === 'Profile' && <section className="student-panel"><div className="student-panel-heading"><div><small>YOUR DETAILS</small><h1>Profile</h1><p>Keep your contact details current so our counsellors can reach you.</p></div></div><form className="student-profile-form" onSubmit={saveProfile}><label>Full name<input required value={profile.full_name} onChange={e => setProfile({...profile, full_name:e.target.value})}/></label><label>Email address<input required type="email" value={profile.email} onChange={e => setProfile({...profile, email:e.target.value})}/></label><label>Phone number<input required value={profile.phone} onChange={e => setProfile({...profile, phone:e.target.value})}/></label><label>Current city and country<input required placeholder="e.g. Lagos, Nigeria" value={profile.student_location} onChange={e => setProfile({...profile, student_location:e.target.value})}/></label><button className="entry-primary">{saved ? 'Profile saved' : 'Save changes'}</button></form></section>}
       {view === 'Application status' && <section className="student-panel"><div className="student-panel-heading"><small>APPLICATION TRACKER</small><h1>Application status</h1><p>Follow your progress and know what happens next.</p></div>{reference ? <><div className="application-timeline"><div className="timeline-step done"><b>Interest submitted</b><span>Reference: {reference}</span></div><div className="timeline-step"><b>Counsellor review</b><span>Our team will contact you with guidance.</span></div><div className="timeline-step"><b>Application and visa support</b><span>Documents and next steps will appear here.</span></div></div><div className="application-details"><div className="details-heading"><div><small>SUBMISSION RECORD</small><h2>Application details</h2></div><span className="status-badge">Submitted</span></div><dl><dt>Reference</dt><dd>{reference}</dd><dt>Applicant</dt><dd>{application?.full_name || profile.full_name || 'Not provided'}</dd><dt>Email</dt><dd>{application?.email || profile.email || 'Not provided'}</dd><dt>Phone</dt><dd>{application?.phone || profile.phone || 'Not provided'}</dd><dt>Course</dt><dd>{application?.course_name || 'Selected course'}</dd><dt>Programme type</dt><dd>{application?.programme_type || 'Not provided'}</dd><dt>Intake</dt><dd>{application?.intake || 'Not provided'}</dd><dt>Study destination</dt><dd>{application?.destination_city ? `${application.destination_city}, ${application.destination}` : application?.destination || 'Not provided'}</dd><dt>Event</dt><dd>{application?.event_name || 'Selected event'}</dd><dt>Message</dt><dd>{application?.message || 'No message added'}</dd></dl></div></> : <div className="student-empty"><ClipboardList/><b>No application yet</b><span>Start by telling us what you want to study.</span><button className="entry-primary" onClick={() => setView('Apply')}>Start application</button></div>}</section>}
-    </main>
+    </main><StudentSupport />
   </div>;
+}
+
+function StudentSupport() {
+  const [open, setOpen] = useState(false);
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState([{ from: "bot", text: "Hi! I can help you think through a course, programme type or study destination." }]);
+  function reply(text) {
+    const value = text.trim(); if (!value) return;
+    const lower = value.toLowerCase();
+    let answer = "A good next step is to search the course catalogue, choose your programme type, then compare the countries and cities where you would like to study.";
+    if (lower.includes("cyber") || lower.includes("technology") || lower.includes("data")) answer = "For a technology path, start with Cyber Security, Data Science or Artificial Intelligence. Choose Undergraduate for a first degree or Postgraduate if you already have a related degree.";
+    else if (lower.includes("business") || lower.includes("finance")) answer = "For a business path, compare Business Management, Accounting and Finance, and Project Management. Your preferred intake and destination can be selected separately.";
+    else if (lower.includes("visa") || lower.includes("document")) answer = "Our counsellors can guide you through documents and visa steps after you submit your interest. Keep your passport and academic records ready.";
+    else if (lower.includes("country") || lower.includes("where")) answer = "You can choose the course first and then select the country and city independently. Popular options include the UK, Canada, Australia, Ireland and the United States.";
+    setMessages(current => [...current, { from: "user", text: value }, { from: "bot", text: answer }]); setMessage("");
+  }
+  return <>
+    <a className="whatsapp-support" href={`https://wa.me/${import.meta.env.VITE_WHATSAPP_NUMBER || "2348000000000"}?text=Hello%20TGM%20Education%2C%20I%20need%20help%20with%20studying%20abroad.`} target="_blank" rel="noreferrer"><MessageCircle size={18}/> WhatsApp support</a>
+    {open && <section className="advisor-panel" aria-label="Student advisor"><header><div><b>Study advisor</b><small>Course and destination guidance</small></div><button onClick={() => setOpen(false)} aria-label="Close advisor">×</button></header><div className="advisor-messages">{messages.map((item, index) => <p key={index} className={item.from}>{item.text}</p>)}</div><div className="advisor-suggestions"><button onClick={() => reply("Which course suits technology?")}>Technology courses</button><button onClick={() => reply("Which country should I choose?")}>Choose a country</button><button onClick={() => reply("What documents do I need?")}>Visa guidance</button></div><form onSubmit={e => { e.preventDefault(); reply(message); }}><input value={message} onChange={e => setMessage(e.target.value)} placeholder="Ask about your study plans..."/><button aria-label="Send message"><Send size={15}/></button></form></section>}
+    {!open && <button className="advisor-launcher" onClick={() => setOpen(true)} aria-label="Open study advisor"><MessageCircle size={18}/> Study advisor</button>}
+  </>;
 }
 
 function StudentPortal() {
