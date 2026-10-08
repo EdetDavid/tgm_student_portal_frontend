@@ -551,7 +551,7 @@ function StudentPortal() {
                 <div className="course-offering-list">
                   {chosen.offerings.map((item, index) => (
                     <button type="button" className={`course-offering-card${String(universityId) === String(item.id) ? " selected" : ""}`} key={`${item.institution}-${item.city}`} onClick={() => { setUniversityId(String(item.id)); setDestination(item.country); setDestinationCity(item.city); }} aria-pressed={String(universityId) === String(item.id)}>
-                      <img src={campusImages[index % campusImages.length]} alt={`${item.institution} campus`} loading="lazy" />
+                      <img src={campusImages[index % campusImages.length]} alt={`${item.institution} campus`} loading="lazy" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = campusImages[0]; }} />
                       <div><b>{item.institution}</b><span><MapPin size={11}/> {item.city}, {item.country}</span><em>{money(item.price || chosen.price)} / year</em></div>
                     </button>
                   ))}
