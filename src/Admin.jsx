@@ -16,6 +16,7 @@ import {
   PieChart,
   Printer,
   GraduationCap,
+  School,
 } from "lucide-react";
 import { api } from "./api.js";
 import ReportCharts from "./ReportCharts.jsx";
@@ -214,7 +215,7 @@ function TrendPanel({ rows }) {
   );
 }
 
-function CourseFields({ course }) {
+function CourseFields({ course, universities = [] }) {
   return (
     <>
       <input
@@ -254,7 +255,8 @@ function CourseFields({ course }) {
         placeholder="Annual tuition (NGN)"
         defaultValue={course?.price}
       />
-      <input aria-label="University" name="institution" maxLength={160} placeholder="University or institution" defaultValue={course?.institution} />
+      <input aria-label="University" name="institution" list="university-options" maxLength={160} placeholder="University or institution" defaultValue={course?.institution} />
+      <datalist id="university-options">{universities.map(university => <option key={university.id} value={university.name}>{university.city}, {university.country}</option>)}</datalist>
       <input aria-label="Region" name="region" maxLength={80} placeholder="Study region" defaultValue={course?.region} />
       <input aria-label="Study country" name="study_country" maxLength={100} placeholder="Study country" defaultValue={course?.study_country} />
       <input
@@ -289,6 +291,16 @@ function CourseFields({ course }) {
       )}
     </>
   );
+}
+
+function UniversityFields({ university }) {
+  return <>
+    <input name="name" required maxLength={160} placeholder="University name" defaultValue={university?.name} />
+    <input name="country" required maxLength={100} placeholder="Country" defaultValue={university?.country} />
+    <input name="city" required maxLength={100} placeholder="City" defaultValue={university?.city} />
+    <input name="image_url" type="url" placeholder="Campus image URL (optional)" defaultValue={university?.image_url} />
+    {university && <label className="course-active"><input type="checkbox" name="active" defaultChecked={university.active} /> Visible in catalogue</label>}
+  </>;
 }
 
 function EventFields({ event }) {
@@ -375,7 +387,9 @@ function Editor({ editor, saving, error, onSave, onClose }) {
         <h2 id="editor-title">Edit {editor.type}</h2>
         <form className="admin-add-form" onSubmit={(e) => onSave(e, editor)}>
           {editor.type === "course" ? (
-            <CourseFields course={editor.item} />
+            <CourseFields course={editor.item} universities={universities} />
+          ) : editor.type === "university" ? (
+            <UniversityFields university={editor.item} />
           ) : (
             <EventFields event={editor.item} />
           )}
@@ -408,6 +422,7 @@ export default function Admin({ onStudent }) {
     pages: 1,
   });
   const [courses, setCourses] = useState([]);
+  const [universities, setUniversities] = useState([]);
   const [events, setEvents] = useState([]);
   const [options, setOptions] = useState({});
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -431,14 +446,16 @@ export default function Admin({ onStudent }) {
     try {
       const me = await api("/api/admin/me/");
       setUser(me);
-      const [cs, es, fs] = await Promise.all([
+      const [cs, es, fs, us] = await Promise.all([
         api("/api/admin/courses/"),
         api("/api/admin/events/"),
         api("/api/admin/filters/"),
+        api("/api/admin/universities/"),
       ]);
       setCourses(cs.courses);
       setEvents(es.events);
       setOptions(fs);
+      setUniversities(us.universities);
       setRevision((value) => value + 1);
     } catch (error) {
       if (error.status === 401 || error.status === 403) setUser(null);
@@ -607,7 +624,7 @@ export default function Admin({ onStudent }) {
     const fields = new FormData(form);
     const type = editing?.type || form.dataset.type;
     const values = Object.fromEntries(fields.entries());
-    for (const key of ["name", "level", "institution", "region", "study_country", "location", "study_city", "city", "venue"]) {
+    for (const key of ["name", "level", "institution", "region", "study_country", "location", "study_city", "country", "city", "venue"]) {
       if (key in values) {
         values[key] = values[key].trim();
         if (!values[key]) {
@@ -629,6 +646,8 @@ export default function Admin({ onStudent }) {
         else setNotice(message);
         return;
       }
+    } else if (type === "university" && editing) {
+      values.active = fields.has("active");
     }
     setSaving(true);
     setEditorError("");
@@ -770,6 +789,7 @@ export default function Admin({ onStudent }) {
     ["Reports", PieChart],
     ["Inquiries", Users],
     ["Courses", BookOpen],
+    ["Universities", School],
     ["Events", CalendarDays],
     ...(user.role === "Super Admin" ? [["Users", Users]] : [["Students", Users]]),
     ...(user.role === "Super Admin" ? [["Access", ShieldCheck]] : []),
@@ -784,6 +804,9 @@ export default function Admin({ onStudent }) {
     `${event.name} ${event.city} ${event.venue}`
       .toLowerCase()
       .includes(catalogSearch.toLowerCase()),
+  );
+  const visibleUniversities = universities.filter((university) =>
+    `${university.name} ${university.country} ${university.city}`.toLowerCase().includes(catalogSearch.toLowerCase()),
   );
 
   return (
@@ -1179,7 +1202,7 @@ export default function Admin({ onStudent }) {
                 onSubmit={(e) => saveResource(e)}
               >
                 <h3>Add a course</h3>
-                <CourseFields />
+                <CourseFields universities={universities} />
                 <button className="admin-primary" disabled={saving}>
                   <Plus size={15} />
                   {saving ? "Saving..." : "Add course"}
@@ -1234,6 +1257,19 @@ export default function Admin({ onStudent }) {
                 {!visibleCourses.length && (
                   <p className="admin-muted">No matching courses.</p>
                 )}
+              </section>
+            </>
+          )}
+          {section === "Universities" && (
+            <>
+              {user.role !== "Counsellor" && <form className="admin-add-form" data-type="university" onSubmit={(e) => saveResource(e)}>
+                <h3>Add a university</h3><UniversityFields />
+                <button className="admin-primary" disabled={saving}><Plus size={15} />{saving ? "Saving..." : "Add university"}</button>
+              </form>}
+              <section className="admin-panel"><div className="manage-head"><div><h3>University catalogue</h3><p className="admin-muted">{user.role === "Counsellor" ? "Read-only university access" : "Manage universities available for course offerings."}</p></div><span>{visibleUniversities.length} universities</span></div>
+                <input className="catalog-search" aria-label="Search universities" placeholder="Search universities, countries or cities" value={catalogSearch} onChange={e => setCatalogSearch(e.target.value)} />
+                <div className="manage-list">{visibleUniversities.map(university => <div className="manage-row" key={university.id}><School size={17} /><div><b>{university.name}</b><small>{university.city} · {university.country}</small></div><span className={university.active ? "active-label" : "inactive-label"}>{university.active ? "Active" : "Inactive"}</span>{user.role !== "Counsellor" && <button className="edit-button" onClick={() => openEditor("university", university)}>Edit</button>}</div>)}</div>
+                {!visibleUniversities.length && <p className="admin-muted">No universities found.</p>}
               </section>
             </>
           )}
