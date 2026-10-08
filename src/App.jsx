@@ -448,7 +448,7 @@ function StudentPortal() {
                   setIntake("");
                 }}
                 maxLength={200}
-                placeholder="Search courses by name or programme level..."
+                placeholder="Search courses by name..."
               />
               <span>{searching ? 'Searching...' : `${visible.length} courses`}</span>
             </div>
@@ -471,7 +471,7 @@ function StudentPortal() {
                       setCourseListOpen(false);
                     }}
                   >
-                    <span><b>{course.name}</b><small>{course.institution} · {course.level}</small></span>
+                    <span><b>{course.name}</b><small>{course.institution}</small></span>
                     <strong>{money(course.price)}<small> / year</small></strong>
                   </button>
                 )) : <p className="no-courses">No courses match “{query}”. Try another search.</p>}
