@@ -419,6 +419,7 @@ export default function Admin({ onStudent }) {
   const [directory, setDirectory] = useState([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [newAccessCode, setNewAccessCode] = useState("");
+  const [newOrganisationCode, setNewOrganisationCode] = useState("");
 
   async function refresh() {
     try {
@@ -557,6 +558,17 @@ export default function Admin({ onStudent }) {
       await api("/api/admin/access-code/", { method: "POST", body: JSON.stringify({ access_code: newAccessCode }) });
       setNewAccessCode("");
       setNotice("Super Admin access code updated");
+    } catch (error) { setNotice(error.message); }
+    finally { setSaving(false); }
+  }
+
+  async function updateOrganisationCode(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api("/api/admin/organisation-code/", { method: "POST", body: JSON.stringify({ organisation_code: newOrganisationCode }) });
+      setNewOrganisationCode("");
+      setNotice("Organisation code updated");
     } catch (error) { setNotice(error.message); }
     finally { setSaving(false); }
   }
@@ -1236,6 +1248,12 @@ export default function Admin({ onStudent }) {
               <form onSubmit={updateAccessCode} className="admin-add-form">
                 <input type="password" minLength="8" required value={newAccessCode} onChange={e => setNewAccessCode(e.target.value)} placeholder="New access code" />
                 <button className="admin-primary" disabled={saving}>{saving ? "Saving..." : "Update access code"}</button>
+              </form>
+              <h3>Organisation code</h3>
+              <p className="admin-muted">Rotate the code required when Admin and Counsellor accounts are registered.</p>
+              <form onSubmit={updateOrganisationCode} className="admin-add-form">
+                <input type="password" minLength="8" required value={newOrganisationCode} onChange={e => setNewOrganisationCode(e.target.value)} placeholder="New organisation code" />
+                <button className="admin-primary" disabled={saving}>{saving ? "Saving..." : "Update organisation code"}</button>
               </form>
             </section>
           )}
