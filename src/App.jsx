@@ -147,6 +147,7 @@ function StudentPortal() {
     [events, setEvents] = useState([]),
     [query, setQuery] = useState(""),
     [courseId, setCourseId] = useState(""),
+    [region, setRegion] = useState(""),
     [busy, setBusy] = useState(false),
     [result, setResult] = useState(null),
     [error, setError] = useState("");
@@ -207,7 +208,9 @@ function StudentPortal() {
     }, 200);
     return () => { clearTimeout(timer); controller.abort(); };
   }, [query, courseListOpen]);
-  const visible = query.trim() ? matches : courses;
+  const sourceCourses = query.trim() ? matches : courses;
+  const visible = region ? sourceCourses.filter(course => course.region === region) : sourceCourses;
+  const regions = [...new Set(courses.map(course => course.region).filter(Boolean))].sort();
   const chosen = matches.find((c) => String(c.id) === String(courseId)) || courses.find((c) => String(c.id) === String(courseId));
   async function submit(e) {
     e.preventDefault();
@@ -449,6 +452,9 @@ function StudentPortal() {
               />
               <span>{searching ? 'Searching...' : `${visible.length} courses`}</span>
             </div>
+            <label className="region-filter-label">Study region (optional)
+              <div className="select-shell region-filter"><select value={region} onChange={e => { setRegion(e.target.value); setCourseId(""); setIntake(""); }}><option value="">All regions</option>{regions.map(item => <option key={item}>{item}</option>)}</select><ChevronDown size={17}/></div>
+            </label>
             {courseListOpen && (
               <div className="course-results" role="listbox" aria-label="Matching courses">
                 {searching ? <p role="status">Searching courses...</p> : searchError ? <p role="alert">{searchError}</p> : visible.length ? visible.map((course) => (
@@ -465,7 +471,7 @@ function StudentPortal() {
                       setCourseListOpen(false);
                     }}
                   >
-                    <span><b>{course.name}</b><small>{course.level}</small></span>
+                    <span><b>{course.name}</b><small>{course.institution} · {course.level}</small></span>
                     <strong>{money(course.price)}<small> / year</small></strong>
                   </button>
                 )) : <p className="no-courses">No courses match “{query}”. Try another search.</p>}
