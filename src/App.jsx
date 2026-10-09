@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Admin from "./Admin.jsx";
+import LoadingIndicator from "./LoadingIndicator.jsx";
 import { api } from "./api.js";
 import { DESTINATIONS as destinations, PROGRAMME_TYPES as programmeTypes, validateStudentInquiry } from "./validation.js";
 import {
@@ -59,7 +60,7 @@ export default function App() {
     setShowAdmin(["/portal", "/admin"].includes(path));
   }
   if (showAdmin) return <Admin onStudent={() => navigate("/")} />;
-  if (authChecking) return <main className="portal-entry"><p role="status">Restoring your session...</p></main>;
+  if (authChecking) return <main className="portal-entry"><LoadingIndicator label="Restoring your session" /></main>;
   if (!authenticated) return <PortalEntry onContinue={() => setAuthenticated(true)} onAdmin={() => navigate("/portal")} />;
   return <StudentDashboard onLogout={async () => { await api("/api/auth/logout/", { method: "POST", body: "{}" }).catch(() => {}); setAuthenticated(false); }}><StudentPortal /></StudentDashboard>;
 }
@@ -387,7 +388,7 @@ function StudentPortal() {
               {error}
             </div>
           )}
-          {loading && <p role="status">Loading courses and events...</p>}
+          {loading && <LoadingIndicator label="Loading courses and events" />}
           {loadError && <div className="error" role="alert">{loadError} <button type="button" onClick={() => loadOptions()}>Retry</button></div>}
           {!loading && !loadError && !events.length && <p className="error">No upcoming events are available yet. Please check back soon.</p>}
           <form onSubmit={submit}>

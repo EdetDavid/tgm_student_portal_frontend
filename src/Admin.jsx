@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { api } from "./api.js";
 import ReportCharts from "./ReportCharts.jsx";
+import LoadingIndicator from "./LoadingIndicator.jsx";
 import "./admin.css";
 
 const STATUSES = ["New", "Contacted", "Converted", "Closed"];
@@ -706,7 +707,7 @@ export default function Admin({ onStudent }) {
   if (checking)
     return (
       <main className="admin-login">
-        <p role="status">Checking your session...</p>
+        <LoadingIndicator label="Checking your session" />
       </main>
     );
   if (!user)
@@ -913,9 +914,7 @@ export default function Admin({ onStudent }) {
             />
           )}
           {loading && (
-            <p className="admin-muted" role="status">
-              Loading {section.toLowerCase()}...
-            </p>
+            <LoadingIndicator label={`Loading ${section.toLowerCase()}`} />
           )}
           {loadError && ["Overview", "Reports", "Inquiries"].includes(section) && (
             <div className="admin-error" role="alert">
