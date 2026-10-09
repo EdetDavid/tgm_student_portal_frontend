@@ -64,6 +64,16 @@
 .course-offering-card em { display: block; margin-top: 4px; color: #277957; font-size: 8px; font-style: normal; font-weight: 700; }
 @media (max-width: 560px) { .course-offering-list { grid-template-columns: 1fr; } }
 
+.secret-input-wrap { position: relative; display: flex; align-items: center; min-width: 0; }
+.entry-form .secret-input-wrap { margin-top: 7px; }
+.entry-form .secret-input-wrap input { margin-top: 0; padding-right: 44px; }
+.secret-toggle { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 7px; background: transparent; color: #74877d; cursor: pointer; }
+.secret-toggle:hover { color: #20785a; background: #edf6f1; }
+.secret-toggle:focus-visible { outline: 2px solid #20785a; outline-offset: 1px; }
+.login-card .secret-input-wrap input { margin-top: 0; padding-right: 43px; }
+.access-panel .secret-input-wrap { flex: 1; min-width: 180px; }
+.access-panel .secret-input-wrap input { width: 100%; padding-right: 42px; }
+
 .brand-loader { display: flex; align-items: center; justify-content: center; gap: 11px; min-height: 76px; color: #72877d; font-size: 11px; }
 .brand-loader-mark { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 14px; color: #20785a; background: #e5f3eb; animation: brand-loader-float 1.25s ease-in-out infinite; position: relative; }
 .brand-loader-mark::after { content: ""; position: absolute; inset: -5px; border: 2px solid #78b99a; border-right-color: transparent; border-radius: 17px; animation: brand-loader-spin 1.1s linear infinite; }

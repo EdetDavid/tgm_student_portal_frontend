@@ -19,6 +19,8 @@ import {
   Bell,
   MessageCircle,
   Send,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 const money = (n) =>
@@ -71,6 +73,8 @@ function PortalEntry({ onContinue, onAdmin }) {
   const [form, setForm] = useState({ username: "", password: "", email: "", full_name: "" });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showOrganisationCode, setShowOrganisationCode] = useState(false);
+  const [showSuperAdminCode, setShowSuperAdminCode] = useState(false);
   async function submit(e) {
     e.preventDefault(); setError(""); setBusy(true);
     try {
@@ -96,8 +100,8 @@ function PortalEntry({ onContinue, onAdmin }) {
         {mode === "signup" && role === "Student" && <label>Full name<input required value={form.full_name} onChange={e => setForm({...form, full_name:e.target.value})} /></label>}
         {mode === "signup" && role === "Student" && <label>Email<input required type="email" value={form.email} onChange={e => setForm({...form, email:e.target.value})} /></label>}
         {mode === "signup" && ["Admin", "Counsellor"].includes(role) && <label>Staff ID<input required value={form.staff_id || ""} onChange={e => setForm({...form, staff_id:e.target.value})} /></label>}
-        {mode === "signup" && ["Admin", "Counsellor"].includes(role) && <label>Organisation code<input required type="password" value={form.organisation_code || ""} onChange={e => setForm({...form, organisation_code:e.target.value})} /></label>}
-        {mode === "signup" && role === "Super Admin" && <label>Super Admin access code<input required type="password" value={form.access_code || ""} onChange={e => setForm({...form, access_code:e.target.value})} /></label>}
+        {mode === "signup" && ["Admin", "Counsellor"].includes(role) && <label>Organisation code<div className="secret-input-wrap"><input required type={showOrganisationCode ? "text" : "password"} value={form.organisation_code || ""} onChange={e => setForm({...form, organisation_code:e.target.value})} /><button type="button" className="secret-toggle" aria-label={showOrganisationCode ? "Hide organisation code" : "Show organisation code"} onClick={() => setShowOrganisationCode(value => !value)}>{showOrganisationCode ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></label>}
+        {mode === "signup" && role === "Super Admin" && <label>Super Admin access code<div className="secret-input-wrap"><input required type={showSuperAdminCode ? "text" : "password"} value={form.access_code || ""} onChange={e => setForm({...form, access_code:e.target.value})} /><button type="button" className="secret-toggle" aria-label={showSuperAdminCode ? "Hide Super Admin access code" : "Show Super Admin access code"} onClick={() => setShowSuperAdminCode(value => !value)}>{showSuperAdminCode ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></label>}
         <label>Username<input required value={form.username} onChange={e => setForm({...form, username:e.target.value})} /></label>
         <label>Password<input required minLength="8" type="password" value={form.password} onChange={e => setForm({...form, password:e.target.value})} /></label>
         <button className="entry-primary" disabled={busy}>{busy ? "Please wait..." : mode === "signup" ? "Create account" : "Sign in"} <ArrowRight size={16} /></button>

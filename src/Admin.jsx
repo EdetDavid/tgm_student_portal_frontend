@@ -17,6 +17,8 @@ import {
   Printer,
   GraduationCap,
   School,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { api } from "./api.js";
 import ReportCharts from "./ReportCharts.jsx";
@@ -442,6 +444,10 @@ export default function Admin({ onStudent }) {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [newAccessCode, setNewAccessCode] = useState("");
   const [newOrganisationCode, setNewOrganisationCode] = useState("");
+  const [showSignupOrganisationCode, setShowSignupOrganisationCode] = useState(false);
+  const [showSignupAccessCode, setShowSignupAccessCode] = useState(false);
+  const [showNewOrganisationCode, setShowNewOrganisationCode] = useState(false);
+  const [showNewAccessCode, setShowNewAccessCode] = useState(false);
 
   async function refresh() {
     try {
@@ -745,10 +751,10 @@ export default function Admin({ onStudent }) {
             <label>Staff ID<input name="staff_id" required maxLength="80" placeholder="e.g. TGM-1042" /></label>
           )}
           {signupMode && ["Admin", "Counsellor"].includes(loginForm.role) && (
-            <label>Organisation code<input name="organisation_code" required type="password" /></label>
+            <label>Organisation code<div className="secret-input-wrap"><input name="organisation_code" required type={showSignupOrganisationCode ? "text" : "password"} /><button type="button" className="secret-toggle" aria-label={showSignupOrganisationCode ? "Hide organisation code" : "Show organisation code"} onClick={() => setShowSignupOrganisationCode(value => !value)}>{showSignupOrganisationCode ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></label>
           )}
           {signupMode && loginForm.role === "Super Admin" && (
-            <label>Super Admin access code<input name="access_code" required type="password" /></label>
+            <label>Super Admin access code<div className="secret-input-wrap"><input name="access_code" required type={showSignupAccessCode ? "text" : "password"} /><button type="button" className="secret-toggle" aria-label={showSignupAccessCode ? "Hide Super Admin access code" : "Show Super Admin access code"} onClick={() => setShowSignupAccessCode(value => !value)}>{showSignupAccessCode ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></label>
           )}
           <label>
             Username
@@ -1284,13 +1290,13 @@ export default function Admin({ onStudent }) {
               <h3>Super Admin access</h3>
               <p className="admin-muted">Rotate the secret code required when creating a new Super Admin account.</p>
               <form onSubmit={updateAccessCode} className="admin-add-form">
-                <input type="password" minLength="8" required value={newAccessCode} onChange={e => setNewAccessCode(e.target.value)} placeholder="New access code" />
+                <div className="secret-input-wrap"><input type={showNewAccessCode ? "text" : "password"} minLength="8" required value={newAccessCode} onChange={e => setNewAccessCode(e.target.value)} placeholder="New access code" /><button type="button" className="secret-toggle" aria-label={showNewAccessCode ? "Hide access code" : "Show access code"} onClick={() => setShowNewAccessCode(value => !value)}>{showNewAccessCode ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div>
                 <button className="admin-primary" disabled={saving}>{saving ? "Saving..." : "Update access code"}</button>
               </form>
               <h3>Organisation code</h3>
               <p className="admin-muted">Rotate the code required when Admin and Counsellor accounts are registered.</p>
               <form onSubmit={updateOrganisationCode} className="admin-add-form">
-                <input type="password" minLength="8" required value={newOrganisationCode} onChange={e => setNewOrganisationCode(e.target.value)} placeholder="New organisation code" />
+                <div className="secret-input-wrap"><input type={showNewOrganisationCode ? "text" : "password"} minLength="8" required value={newOrganisationCode} onChange={e => setNewOrganisationCode(e.target.value)} placeholder="New organisation code" /><button type="button" className="secret-toggle" aria-label={showNewOrganisationCode ? "Hide organisation code" : "Show organisation code"} onClick={() => setShowNewOrganisationCode(value => !value)}>{showNewOrganisationCode ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div>
                 <button className="admin-primary" disabled={saving}>{saving ? "Saving..." : "Update organisation code"}</button>
               </form>
             </section>
