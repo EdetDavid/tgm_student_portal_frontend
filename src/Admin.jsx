@@ -366,7 +366,7 @@ function EventFields({ event }) {
   );
 }
 
-function Editor({ editor, saving, error, onSave, onClose }) {
+function Editor({ editor, universities = [], saving, error, onSave, onClose }) {
   useEffect(() => {
     const closeOnEscape = (e) => {
       if (e.key === "Escape" && !saving) onClose();
@@ -1505,6 +1505,7 @@ export default function Admin({ onStudent, darkMode, onToggleTheme }) {
         <Editor
           key={`${editor.type}-${editor.item.id}`}
           editor={editor}
+          universities={universities}
           saving={saving}
           error={editorError}
           onSave={saveResource}

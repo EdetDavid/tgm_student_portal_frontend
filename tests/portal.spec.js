@@ -1,5 +1,28 @@
 import { test, expect } from '@playwright/test';
 
+test('super admin can open and save a course editor without crashing', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/portal/');
+  await page.getByRole('combobox', { name: 'Sign in as' }).selectOption('Super Admin');
+  await page.getByRole('textbox', { name: 'Username' }).fill('e2e-super-admin');
+  await page.getByLabel('Password', { exact: true }).fill('E2eOnly934!');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await page.getByRole('button', { name: 'Go to workspace' }).click();
+  await page.getByRole('button', { name: 'Courses', exact: true }).click();
+
+  const courseRow = page.locator('.manage-row').first();
+  await courseRow.getByRole('button', { name: 'Edit', exact: true }).click();
+  const courseEditor = page.getByRole('dialog');
+  await expect(courseEditor.getByRole('heading', { name: 'Edit course' })).toBeVisible();
+  await expect(courseEditor.getByLabel('University')).toBeVisible();
+  await courseEditor.getByRole('spinbutton', { name: 'Annual tuition (NGN)' }).fill('27000');
+  await courseEditor.getByRole('button', { name: 'Save changes' }).click();
+  await expect(courseEditor).toHaveCount(0);
+  await expect(courseRow).toContainText('27,000');
+  expect(errors).toEqual([]);
+});
+
 test.describe.serial('Student and admin portal', () => {
   test('student signup requires and submits full name and email', async ({ page }) => {
     let signupPayload;

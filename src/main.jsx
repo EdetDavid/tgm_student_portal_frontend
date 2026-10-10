@@ -18,7 +18,7 @@ class AppErrorBoundary extends React.Component {
     if (this.state.failed) {
       return <main style={{maxWidth: 640, margin: '12vh auto', padding: 24, fontFamily: 'sans-serif', color: '#24352f'}}>
         <h1>Student Portal couldn’t load</h1>
-        <p>Refresh the page. If the problem continues, restart the frontend and Django development servers.</p>
+        <p>Refresh the page to try again. If the problem continues, please contact support.</p>
       </main>
     }
     return this.props.children
