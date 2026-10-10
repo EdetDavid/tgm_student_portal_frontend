@@ -501,6 +501,20 @@
 .theme-dark .inquiry-table td:nth-child(1) {
   color: #b5c5bb !important;
 }
+
+/* Light hover surfaces need dark foregrounds, including nested table labels. */
+.theme-dark .inquiry-table tbody tr:hover {
+  background: #eef6f0 !important;
+  color: #142019 !important;
+}
+.theme-dark .inquiry-table tbody tr:hover :is(td, b, strong, small, span, .activity-role) {
+  color: #142019 !important;
+}
+.theme-dark .back-student:hover,
+.theme-dark .secret-toggle:hover {
+  background: #eef6f0 !important;
+  color: #142019 !important;
+}
 .theme-dark :focus-visible { outline-color: #9be0b8; }
 @media(max-width:520px){.toast{right:12px;bottom:12px;width:calc(100vw - 24px);box-sizing:border-box;padding:12px;font-size:12px}}
 .admin-shell.sidebar-collapsed .admin-side-bottom .color-mode-toggle{justify-content:center;padding:0}
