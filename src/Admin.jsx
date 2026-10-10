@@ -20,10 +20,14 @@ import {
   School,
   Eye,
   EyeOff,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { api } from "./api.js";
 import ReportCharts from "./ReportCharts.jsx";
 import LoadingIndicator from "./LoadingIndicator.jsx";
+import { ThemeModeButton } from "./ThemeMode.jsx";
+import Toast from "./Toast.jsx";
 import "./admin.css";
 
 const STATUSES = ["New", "Contacted", "Converted", "Closed"];
@@ -411,7 +415,7 @@ function Editor({ editor, saving, error, onSave, onClose }) {
   );
 }
 
-export default function Admin({ onStudent }) {
+export default function Admin({ onStudent, darkMode, onToggleTheme }) {
   const [user, setUser] = useState(null);
   const [checking, setChecking] = useState(true);
   const [loginForm, setLoginForm] = useState({ username: "", password: "", role: "Admin" });
@@ -440,6 +444,7 @@ export default function Admin({ onStudent }) {
   const [loadError, setLoadError] = useState("");
   const [editorError, setEditorError] = useState("");
   const [notice, setNotice] = useState("");
+  const [noticeType, setNoticeType] = useState("success");
   const [catalogSearch, setCatalogSearch] = useState("");
   const [directory, setDirectory] = useState([]);
   const [activityEntries, setActivityEntries] = useState([]);
@@ -449,11 +454,17 @@ export default function Admin({ onStudent }) {
   const [activitySearch, setActivitySearch] = useState("");
   const [activityAction, setActivityAction] = useState("");
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem("tgm-sidebar-collapsed") === "true");
   const [newAccessCode, setNewAccessCode] = useState("");
   const [newOrganisationCode, setNewOrganisationCode] = useState("");
   const [showSignupOrganisationCode, setShowSignupOrganisationCode] = useState(false);
   const [showSignupAccessCode, setShowSignupAccessCode] = useState(false);
   const [codesNeedRotation, setCodesNeedRotation] = useState({ access: false, organisation: false });
+
+  function notify(message, type = "success") {
+    setNoticeType(type);
+    setNotice(message);
+  }
 
   async function refresh() {
     try {
@@ -473,7 +484,7 @@ export default function Admin({ onStudent }) {
     } catch (error) {
       if (error.status === 401 || error.status === 403) setUser(null);
       else {
-        setNotice(error.message);
+        notify(error.message, "error");
         setLoginError("Cannot reach the server. Check that Django is running.");
       }
     } finally {
@@ -495,7 +506,7 @@ export default function Admin({ onStudent }) {
         setNewOrganisationCode(organisation.organisation_code || "");
         setCodesNeedRotation({ access: access.needs_rotation, organisation: organisation.needs_rotation });
       })
-      .catch(error => { if (active) setNotice(error.message); });
+      .catch(error => { if (active) notify(error.message, "error"); });
     return () => { active = false; };
   }, [section, user]);
 
@@ -553,6 +564,12 @@ export default function Admin({ onStudent }) {
     setSelected(null);
     setCatalogSearch("");
   }
+  function toggleSidebar() {
+    setSidebarCollapsed(current => {
+      localStorage.setItem("tgm-sidebar-collapsed", String(!current));
+      return !current;
+    });
+  }
 
   async function signIn(e) {
     e.preventDefault();
@@ -605,7 +622,7 @@ export default function Admin({ onStudent }) {
       setLoginForm({ username: "", password: "", role: "Admin" });
       setShowOnboarding(false);
     } catch (error) {
-      setNotice(error.message);
+      notify(error.message, "error");
     } finally {
       setSaving(false);
     }
@@ -617,8 +634,8 @@ export default function Admin({ onStudent }) {
     try {
       await api("/api/admin/access-code/", { method: "POST", body: JSON.stringify({ access_code: newAccessCode }) });
       setCodesNeedRotation(current => ({ ...current, access: false }));
-      setNotice("Super Admin access code updated");
-    } catch (error) { setNotice(error.message); }
+      notify("Super Admin access code updated");
+    } catch (error) { notify(error.message, "error"); }
     finally { setSaving(false); }
   }
 
@@ -628,8 +645,51 @@ export default function Admin({ onStudent }) {
     try {
       await api("/api/admin/organisation-code/", { method: "POST", body: JSON.stringify({ organisation_code: newOrganisationCode }) });
       setCodesNeedRotation(current => ({ ...current, organisation: false }));
-      setNotice("Organisation code updated");
-    } catch (error) { setNotice(error.message); }
+      notify("Organisation code updated");
+    } catch (error) { notify(error.message, "error"); }
+    finally { setSaving(false); }
+  }
+
+  async function createStaffAccount(e) {
+    e.preventDefault();
+    setSaving(true);
+    const form = e.currentTarget;
+    const payload = Object.fromEntries(new FormData(form).entries());
+    try {
+      await api("/api/admin/users/", { method: "POST", body: JSON.stringify(payload) });
+      const result = await api("/api/admin/users/");
+      setDirectory(result.users);
+      form.reset();
+      notify("Staff account created");
+    } catch (error) { notify(error.message, "error"); }
+    finally { setSaving(false); }
+  }
+
+  async function changeStaffRole(item, role) {
+    if (role === item.role) return;
+    let staffId = item.staff_id;
+    if (role !== "Super Admin" && !staffId) {
+      staffId = window.prompt("Enter the staff ID for this account:")?.trim();
+      if (!staffId) return;
+    }
+    setSaving(true);
+    try {
+      await api(`/api/admin/users/${item.id}/`, { method: "PATCH", body: JSON.stringify({ role, staff_id: staffId }) });
+      const result = await api("/api/admin/users/");
+      setDirectory(result.users);
+      notify(`${item.username} is now ${role}`);
+    } catch (error) { notify(error.message, "error"); }
+    finally { setSaving(false); }
+  }
+
+  async function deleteStaffAccount(item) {
+    if (!window.confirm(`Delete staff account “${item.username}”? This cannot be undone.`)) return;
+    setSaving(true);
+    try {
+      await api(`/api/admin/users/${item.id}/`, { method: "DELETE" });
+      setDirectory(current => current.filter(record => record.id !== item.id));
+      notify(`Staff account ${item.username} deleted`);
+    } catch (error) { notify(error.message, "error"); }
     finally { setSaving(false); }
   }
 
@@ -644,7 +704,7 @@ export default function Admin({ onStudent }) {
           internal_notes: selected.internal_notes,
         }),
       });
-      setNotice("Inquiry updated");
+      notify("Inquiry updated");
       setSelected(null);
       setPage(1);
       await refresh();
@@ -667,7 +727,7 @@ export default function Admin({ onStudent }) {
         if (!values[key]) {
           const message = `${key} cannot be blank.`;
           if (editing) setEditorError(message);
-          else setNotice(message);
+          else notify(message, "error");
           return;
         }
       }
@@ -680,7 +740,7 @@ export default function Admin({ onStudent }) {
       if (!values.intakes.length) {
         const message = "Choose at least one available intake.";
         if (editing) setEditorError(message);
-        else setNotice(message);
+        else notify(message, "error");
         return;
       }
     } else if (type === "university" && editing) {
@@ -697,13 +757,13 @@ export default function Admin({ onStudent }) {
       });
       if (editing) setEditor(null);
       else form.reset();
-      setNotice(
+      notify(
         `${type === "university" ? "University" : type === "course" ? "Course" : "Event"} ${editing ? "updated" : "added"}`,
       );
       await refresh();
     } catch (error) {
       if (editing) setEditorError(error.message);
-      else setNotice(error.message);
+      else notify(error.message, "error");
     } finally {
       setSaving(false);
     }
@@ -723,10 +783,10 @@ export default function Admin({ onStudent }) {
         method: "PATCH",
         body: JSON.stringify({ active: !course.active }),
       });
-      setNotice(course.active ? "Course deactivated" : "Course reactivated");
+      notify(course.active ? "Course deactivated" : "Course reactivated");
       await refresh();
     } catch (error) {
-      setNotice(error.message);
+      notify(error.message, "error");
     } finally {
       setSaving(false);
     }
@@ -743,13 +803,16 @@ export default function Admin({ onStudent }) {
 
   if (checking)
     return (
-      <main className="admin-login">
+      <main className={`admin-login theme-surface ${darkMode ? "theme-dark" : ""}`}>
+        <ThemeModeButton darkMode={darkMode} onToggle={onToggleTheme}/>
         <LoadingIndicator label="Checking your session" />
       </main>
     );
   if (!user)
     return (
-      <main className="admin-login">
+      <main className={`admin-login theme-surface ${darkMode ? "theme-dark" : ""}`}>
+        <ThemeModeButton darkMode={darkMode} onToggle={onToggleTheme}/>
+        <Toast message={loginError} type="error" onClose={() => setLoginError("")} />
         <button className="back-student" onClick={onStudent}>
           ← Student portal
         </button>
@@ -760,11 +823,6 @@ export default function Admin({ onStudent }) {
           <span className="admin-kicker">TGM EDUCATION · {loginForm.role.toUpperCase()} PORTAL</span>
           <h1>{signupMode ? "Create an account" : "Portal sign in"}</h1>
           {/* <p>Use your Django staff account to manage student inquiries.</p> */}
-          {loginError && (
-            <div className="admin-error" role="alert">
-              {loginError}
-            </div>
-          )}
           <label>
             Sign in as
             <select
@@ -848,7 +906,7 @@ export default function Admin({ onStudent }) {
   );
 
   return (
-    <div className="admin-shell">
+    <div className={`admin-shell theme-surface ${darkMode ? "theme-dark" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       {showOnboarding && (
         <div className="onboarding-backdrop" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
           <div className="onboarding-card">
@@ -861,30 +919,33 @@ export default function Admin({ onStudent }) {
         </div>
       )}
       <aside className="admin-side">
-        <a className="admin-brand" href="/admin/">
+        <div className="admin-sidebar-heading"><a className="admin-brand" href="/admin/">
           <span><GraduationCap size={17} /></span> {portalName(user.role)} <small>{user.role?.toUpperCase()}</small>
-        </a>
+        </a><button type="button" className="sidebar-collapse-toggle" onClick={toggleSidebar} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}>{sidebarCollapsed ? <PanelLeftOpen size={18}/> : <PanelLeftClose size={18}/>}</button></div>
         <div className="admin-nav-label">WORKSPACE</div>
         {nav.map(([name, Icon]) => (
           <button
             key={name}
             aria-label={name}
+            title={sidebarCollapsed ? name : undefined}
             className={`admin-nav-item ${section === name ? "chosen" : ""}`}
             onClick={() => navigate(name)}
           >
-            <Icon size={17} />
-            {name}
+            <Icon size={sidebarCollapsed ? 22 : 17} strokeWidth={sidebarCollapsed ? 2.8 : 1.8} />
+            <span>{name}</span>
           </button>
         ))}
         {user.role === "Super Admin" && <a
           className="admin-nav-item admin-api-link"
           href="/api/"
           aria-label="Browse REST API"
+          title={sidebarCollapsed ? "REST API" : undefined}
         >
-          <Code2 size={17} />
-          REST API
+          <Code2 size={sidebarCollapsed ? 22 : 17} strokeWidth={sidebarCollapsed ? 2.8 : 1.8} />
+          <span>REST API</span>
         </a>}
         <div className="admin-side-bottom">
+          <ThemeModeButton darkMode={darkMode} onToggle={onToggleTheme}/>
           <div className="admin-user">
             <span>{user.username.slice(0, 1).toUpperCase()}</span>
             <div>
@@ -893,7 +954,7 @@ export default function Admin({ onStudent }) {
             </div>
           </div>
           <button className="admin-logout" disabled={saving} onClick={signOut}>
-            <LogOut size={16} /> Sign out
+            <LogOut size={sidebarCollapsed ? 21 : 16} strokeWidth={sidebarCollapsed ? 2.8 : 1.8} /> <span>Sign out</span>
           </button>
         </div>
       </aside>
@@ -933,15 +994,7 @@ export default function Admin({ onStudent }) {
             )}
             {section === "Reports" && <button type="button" className="admin-outline" onClick={() => window.print()}><Printer size={15} /> Print report</button>}
           </div>
-          {notice && (
-            <button
-              className="admin-notice"
-              role="status"
-              onClick={() => setNotice("")}
-            >
-              {notice} <span>×</span>
-            </button>
-          )}
+          <Toast message={notice} type={noticeType} onClose={() => setNotice("")} />
           {["Overview", "Reports", "Inquiries"].includes(section) && (
             <FilterBar
               filters={filters}
@@ -1311,13 +1364,31 @@ export default function Admin({ onStudent }) {
               </section>
             </>
           )}
-          {(section === "Users" || section === "Students") && (
+          {section === "Users" && user.role === "Super Admin" && <>
+            <form className="admin-add-form staff-create-form" onSubmit={createStaffAccount}>
+              <h3>Add a staff account</h3>
+              <input name="username" required maxLength={150} placeholder="Username" aria-label="Staff username" />
+              <select name="role" defaultValue="Admin" aria-label="Staff role"><option>Admin</option><option>Counsellor</option><option>Super Admin</option></select>
+              <input name="staff_id" maxLength={80} placeholder="Staff ID (required for Admin/Counsellor)" aria-label="Staff ID" />
+              <input name="password" required minLength={8} type="password" placeholder="Temporary password" aria-label="Temporary password" />
+              <button className="admin-primary" disabled={saving}><Plus size={15}/>{saving ? "Creating..." : "Create staff account"}</button>
+            </form>
             <section className="admin-panel directory-panel">
-              <div className="manage-head"><div><h3>{section === "Users" ? "User management" : "Registered students"}</h3><p className="admin-muted">{section === "Users" ? "All application accounts and their assigned roles." : "Student records captured by the portal."}</p></div><span>{directory.length} records</span></div>
-              <div className="table-scroll"><table className="inquiry-table"><thead><tr>{section === "Users" ? <><th>USERNAME</th><th>EMAIL</th><th>ROLE</th><th>STATUS</th><th>JOINED</th></> : <><th>NAME</th><th>EMAIL</th><th>PHONE</th><th>LOCATION</th><th>INQUIRIES</th></>}</tr></thead><tbody>{directory.map(item => section === "Users" ? <tr key={item.id}><td><b>{item.username}</b></td><td>{item.email || "—"}</td><td><span className="status-pill">{item.role}</span></td><td>{item.active ? "Active" : "Inactive"}</td><td>{new Date(item.date_joined).toLocaleDateString()}</td></tr> : <tr key={item.id}><td><b>{item.full_name}</b></td><td>{item.email}</td><td>{item.phone}</td><td>{item.location}</td><td>{item.inquiries}</td></tr>)}</tbody></table></div>
-              {!directory.length && <p className="admin-muted">No records found.</p>}
+              <div className="manage-head"><div><h3>Staff user management</h3><p className="admin-muted">Create staff accounts, change roles, or remove access. Student accounts are managed separately.</p></div><span>{directory.length} staff users</span></div>
+              <div className="table-scroll"><table className="inquiry-table"><thead><tr><th>USERNAME</th><th>STAFF ID</th><th>ROLE</th><th>STATUS</th><th>JOINED</th><th>ACTIONS</th></tr></thead><tbody>{directory.map(item => <tr key={item.id}>
+                <td><b>{item.username}</b></td><td>{item.staff_id || "—"}</td>
+                <td><select aria-label={`Role for ${item.username}`} value={item.role} disabled={saving || item.username === user.username} onChange={event => changeStaffRole(item, event.target.value)}><option>Admin</option><option>Counsellor</option><option>Super Admin</option></select></td>
+                <td>{item.active ? "Active" : "Inactive"}</td><td>{new Date(item.date_joined).toLocaleDateString()}</td>
+                <td><button type="button" className="user-delete-button" disabled={saving || item.username === user.username} onClick={() => deleteStaffAccount(item)}>Delete</button></td>
+              </tr>)}</tbody></table></div>
+              {!directory.length && <p className="admin-muted">No staff accounts found.</p>}
             </section>
-          )}
+          </>}
+          {section === "Students" && <section className="admin-panel directory-panel">
+            <div className="manage-head"><div><h3>Registered students</h3><p className="admin-muted">Student records captured by the portal.</p></div><span>{directory.length} students</span></div>
+            <div className="table-scroll"><table className="inquiry-table"><thead><tr><th>NAME</th><th>EMAIL</th><th>PHONE</th><th>LOCATION</th><th>INQUIRIES</th></tr></thead><tbody>{directory.map(item => <tr key={item.id}><td><b>{item.full_name}</b></td><td>{item.email}</td><td>{item.phone}</td><td>{item.location}</td><td>{item.inquiries}</td></tr>)}</tbody></table></div>
+            {!directory.length && <p className="admin-muted">No records found.</p>}
+          </section>}
           {section === "Activity" && user.role === "Super Admin" && (
             <section className="admin-panel activity-panel">
               <div className="manage-head">

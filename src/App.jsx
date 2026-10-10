@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import Admin from "./Admin.jsx";
 import LoadingIndicator from "./LoadingIndicator.jsx";
+import { ThemeModeButton, useThemeMode } from "./ThemeMode.jsx";
+import Toast from "./Toast.jsx";
 import { api } from "./api.js";
 import { DESTINATIONS as destinations, PROGRAMME_TYPES as programmeTypes, validateStudentInquiry } from "./validation.js";
 import {
@@ -21,6 +23,9 @@ import {
   Send,
   Eye,
   EyeOff,
+  LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 
 const money = (n) =>
@@ -39,6 +44,7 @@ const campusImages = [
 ];
 
 export default function App() {
+  const [darkMode, toggleTheme] = useThemeMode();
   const [showAdmin, setShowAdmin] = useState(["/portal", "/admin"].includes(window.location.pathname.replace(/\/$/, "")));
   const [authenticated, setAuthenticated] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
@@ -61,13 +67,13 @@ export default function App() {
     window.history.pushState({}, "", path);
     setShowAdmin(["/portal", "/admin"].includes(path));
   }
-  if (showAdmin) return <Admin onStudent={() => navigate("/")} />;
-  if (authChecking) return <main className="portal-entry"><LoadingIndicator label="Restoring your session" /></main>;
-  if (!authenticated) return <PortalEntry onContinue={() => setAuthenticated(true)} onAdmin={() => navigate("/portal")} />;
-  return <StudentDashboard onLogout={async () => { await api("/api/auth/logout/", { method: "POST", body: "{}" }).catch(() => {}); setAuthenticated(false); }}><StudentPortal /></StudentDashboard>;
+  if (showAdmin) return <Admin onStudent={() => navigate("/")} darkMode={darkMode} onToggleTheme={toggleTheme} />;
+  if (authChecking) return <main className={`portal-entry theme-surface ${darkMode ? "theme-dark" : ""}`}><LoadingIndicator label="Restoring your session" /></main>;
+  if (!authenticated) return <PortalEntry onContinue={() => setAuthenticated(true)} onAdmin={() => navigate("/portal")} darkMode={darkMode} onToggleTheme={toggleTheme} />;
+  return <StudentDashboard darkMode={darkMode} onToggleTheme={toggleTheme} onLogout={async () => { await api("/api/auth/logout/", { method: "POST", body: "{}" }).catch(() => {}); setAuthenticated(false); }}><StudentPortal /></StudentDashboard>;
 }
 
-function PortalEntry({ onContinue, onAdmin }) {
+function PortalEntry({ onContinue, onAdmin, darkMode, onToggleTheme }) {
   const [role, setRole] = useState("Student");
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({ username: "", password: "", email: "", full_name: "" });
@@ -87,7 +93,8 @@ function PortalEntry({ onContinue, onAdmin }) {
       } else onAdmin();
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
-  return <main className="portal-entry">
+  return <main className={`portal-entry theme-surface ${darkMode ? "theme-dark" : ""}`}>
+    <ThemeModeButton darkMode={darkMode} onToggle={onToggleTheme}/>
     {role === "Student" && <section className="entry-hero"><div><span className="eyebrow"><Sparkles size={13}/> YOUR NEXT CHAPTER STARTS HERE</span><h2>Find your place<br/>in the <em>world.</em></h2><p>Start your study abroad journey with TGM Education.</p></div><Globe2 size={78} strokeWidth={1.1}/></section>}
     <section className="portal-entry-card">
       <div className="admin-lock"><GraduationCap size={23} /></div>
@@ -95,7 +102,7 @@ function PortalEntry({ onContinue, onAdmin }) {
       <h1>Welcome to Student Portal</h1>
       <p>Sign in to continue to your space, or choose a role to begin.</p>
       <label>Continue as<select value={role} onChange={e => setRole(e.target.value)}><option>Student</option><option>Admin</option><option>Counsellor</option><option>Super Admin</option></select></label>
-      {error && <div className="entry-error" role="alert">{error}</div>}
+      <Toast message={error} type="error" onClose={() => setError("")} />
       <form onSubmit={submit} className="entry-form">
         {mode === "signup" && role === "Student" && <label>Full name<input required value={form.full_name} onChange={e => setForm({...form, full_name:e.target.value})} /></label>}
         {mode === "signup" && role === "Student" && <label>Email<input required type="email" value={form.email} onChange={e => setForm({...form, email:e.target.value})} /></label>}
@@ -114,8 +121,9 @@ function PortalEntry({ onContinue, onAdmin }) {
   </main>;
 }
 
-function StudentDashboard({ children, onLogout }) {
+function StudentDashboard({ children, onLogout, darkMode, onToggleTheme }) {
   const [view, setView] = useState("Apply");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem("tgm-sidebar-collapsed") === "true");
   const [profile, setProfile] = useState(() => JSON.parse(localStorage.getItem("student_profile") || '{"full_name":"","email":"","phone":"","student_location":""}'));
   const [saved, setSaved] = useState(false);
   const [applications, setApplications] = useState([]);
@@ -133,10 +141,11 @@ function StudentDashboard({ children, onLogout }) {
     return () => controller.abort();
   }, [view]);
   function saveProfile(e) { e.preventDefault(); localStorage.setItem("student_profile", JSON.stringify(profile)); setSaved(true); setTimeout(() => setSaved(false), 2500); }
-  return <div className="student-app-shell">
-    <aside className="student-side"><a className="student-brand" href="/"><span><GraduationCap size={18}/></span><b>TGM Education <em>|</em> Student</b></a><small className="student-nav-label">MY SPACE</small>
-      {[['Overview', LayoutDashboard], ['Apply', ClipboardList], ['Profile', UserRound], ['Application status', Bell]].map(([name, Icon]) => <button key={name} className={`student-nav-item ${view === name ? 'active' : ''}`} onClick={() => setView(name)}><Icon size={17}/>{name}</button>)}
-      <div className="student-side-bottom"><button className="student-signout" onClick={onLogout}>Sign out</button></div>
+  function toggleSidebar() { setSidebarCollapsed(current => { localStorage.setItem("tgm-sidebar-collapsed", String(!current)); return !current; }); }
+  return <div className={`student-app-shell theme-surface ${darkMode ? "theme-dark" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+    <aside className="student-side"><div className="student-sidebar-heading"><a className="student-brand" href="/"><span><GraduationCap size={sidebarCollapsed ? 22 : 18} strokeWidth={sidebarCollapsed ? 2.8 : 1.8}/></span><b>TGM Education <em>|</em> Student</b></a><button type="button" className="sidebar-collapse-toggle" onClick={toggleSidebar} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}>{sidebarCollapsed ? <PanelLeftOpen size={18}/> : <PanelLeftClose size={18}/>}</button></div><small className="student-nav-label">MY SPACE</small>
+      {[['Overview', LayoutDashboard], ['Apply', ClipboardList], ['Profile', UserRound], ['Application status', Bell]].map(([name, Icon]) => <button key={name} title={sidebarCollapsed ? name : undefined} aria-label={name} className={`student-nav-item ${view === name ? 'active' : ''}`} onClick={() => setView(name)}><Icon size={sidebarCollapsed ? 22 : 17} strokeWidth={sidebarCollapsed ? 2.8 : 1.8}/><span>{name}</span></button>)}
+      <div className="student-side-bottom"><ThemeModeButton darkMode={darkMode} onToggle={onToggleTheme}/><button title={sidebarCollapsed ? "Sign out" : undefined} className="student-signout" onClick={onLogout}><LogOut size={sidebarCollapsed ? 21 : 16} strokeWidth={sidebarCollapsed ? 2.8 : 1.8}/><span>Sign out</span></button></div>
     </aside>
     <main className="student-workspace"><header className="student-workspace-top"><div><span>MY SPACE /</span> {view}</div><span className="student-online"><i/> Signed in</span></header>
       {view === 'Overview' && <section className="student-dashboard-home"><div className="student-welcome"><small>STUDENT DASHBOARD</small><h1>Keep your study plans moving.</h1><p>Search courses, submit an application and follow the next steps from one place.</p><button className="entry-primary" onClick={() => setView('Apply')}>Start an application <ArrowRight size={16}/></button></div><div className="student-dashboard-cards"><article><ClipboardList/><b>Applications</b><strong>{applicationsLoading ? 'Loading…' : applications.length ? `${applications.length} application${applications.length === 1 ? '' : 's'}` : 'No applications yet'}</strong><button onClick={() => setView(applications.length ? 'Application status' : 'Apply')}>{applications.length ? 'Track application' : 'Apply now'}</button></article><article><UserRound/><b>Profile</b><strong>Keep your details up to date</strong><button onClick={() => setView('Profile')}>Update profile</button></article></div></section>}

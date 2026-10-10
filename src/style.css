@@ -80,13 +80,18 @@
 .access-panel .secret-input-wrap { flex: 1; min-width: 180px; }
 .access-panel .secret-input-wrap input { width: 100%; padding-right: 42px; }
 
-.brand-loader { display: flex; align-items: center; justify-content: center; gap: 11px; min-height: 76px; color: #72877d; font-size: 11px; }
-.brand-loader-mark { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 14px; color: #20785a; background: #e5f3eb; animation: brand-loader-float 1.25s ease-in-out infinite; position: relative; }
-.brand-loader-mark::after { content: ""; position: absolute; inset: -5px; border: 2px solid #78b99a; border-right-color: transparent; border-radius: 17px; animation: brand-loader-spin 1.1s linear infinite; }
-.brand-loader-label { font-weight: 600; }
-@keyframes brand-loader-float { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-4px) scale(1.04); } }
+.brand-loader-backdrop{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:20px;background:rgba(245,248,246,.78);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.brand-loader{width:min(220px,calc(100vw - 40px));box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;padding:25px 20px;border:1px solid #e1ebe5;border-radius:18px;background:rgba(255,255,255,.97);box-shadow:0 18px 50px rgba(30,70,51,.12);color:#72877d;font-size:11px;animation:brand-loader-enter .18s ease-out both}
+.brand-loader-mark{width:54px;height:54px;display:grid;place-items:center;border-radius:16px;color:#20785a;background:#e5f3eb;position:relative;transform:none;animation:none}
+.brand-loader-mark::after{content:"";position:absolute;inset:-6px;border:2px solid #78b99a;border-right-color:transparent;border-radius:20px;animation:brand-loader-spin 1.25s linear infinite}
+.brand-loader-label{font-weight:700;color:#405d4e;text-align:center}
+.brand-loader-dots{height:5px;display:flex;align-items:center;gap:5px}
+.brand-loader-dots i{width:5px;height:5px;border-radius:50%;background:#68a789;animation:brand-loader-dot 1s ease-in-out infinite}
+.brand-loader-dots i:nth-child(2){animation-delay:.15s}.brand-loader-dots i:nth-child(3){animation-delay:.3s}
+@keyframes brand-loader-enter{from{opacity:0;transform:translateY(4px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes brand-loader-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .brand-loader-mark, .brand-loader-mark::after { animation-duration: 3s; } }
+@keyframes brand-loader-dot{0%,70%,100%{opacity:.35;transform:scale(.8)}35%{opacity:1;transform:scale(1.15)}}
+@media (prefers-reduced-motion: reduce) { .brand-loader,.brand-loader-mark::after,.brand-loader-dots i { animation:none; } }
 
 /* Student application tracker */
 .application-status-filters{display:flex;gap:8px;overflow-x:auto;padding:3px 1px 12px;margin-bottom:12px;scrollbar-width:thin}
@@ -117,3 +122,89 @@
   .student-application-card{padding:15px}.student-application-facts{grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 12px}
 }
 @media(max-height:560px){.advisor-panel{max-height:calc(100dvh - 16px);bottom:8px}.advisor-messages{min-height:70px}.advisor-panel header{padding:9px 13px}.advisor-suggestions{padding:6px}.advisor-panel form{padding:7px}}
+
+/* Sidebar collapse controls shared by staff and student workspaces. */
+.sidebar-collapse-toggle{flex:0 0 auto;width:32px;height:32px;display:grid;place-items:center;border:1px solid #e3ebe6;border-radius:8px;background:#fff;color:#4d7862;cursor:pointer}
+.sidebar-collapse-toggle:hover{background:#edf6f1;color:#20785a}
+.admin-sidebar-heading,.student-sidebar-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
+.admin-sidebar-heading .admin-brand,.student-sidebar-heading .student-brand{min-width:0;flex:1}
+.admin-shell.sidebar-collapsed{grid-template-columns:72px minmax(0,1fr)}
+.admin-shell.sidebar-collapsed .admin-side{padding:20px 8px}
+.admin-shell.sidebar-collapsed .admin-brand{justify-content:center;padding:0 0 18px;font-size:0}
+.admin-shell.sidebar-collapsed .admin-brand small,.admin-shell.sidebar-collapsed .admin-nav-label,.admin-shell.sidebar-collapsed .admin-user div,.admin-shell.sidebar-collapsed .admin-student-link span,.admin-shell.sidebar-collapsed .admin-nav-item span,.admin-shell.sidebar-collapsed .admin-logout span{display:none}
+.admin-shell.sidebar-collapsed .admin-nav-item,.admin-shell.sidebar-collapsed .admin-logout,.admin-shell.sidebar-collapsed .admin-student-link{justify-content:center;padding:0;font-size:0}
+.admin-shell.sidebar-collapsed .admin-nav-item svg,.admin-shell.sidebar-collapsed .admin-logout svg,.admin-shell.sidebar-collapsed .admin-student-link svg{flex:none}
+.admin-shell.sidebar-collapsed .admin-user{justify-content:center;padding:12px 0}
+.admin-shell.sidebar-collapsed .admin-sidebar-heading{flex-direction:column-reverse}
+.admin-shell.sidebar-collapsed .sidebar-collapse-toggle{width:36px;height:34px}
+.student-app-shell.sidebar-collapsed{grid-template-columns:72px minmax(0,1fr)}
+.student-app-shell.sidebar-collapsed .student-side{padding:20px 8px}
+.student-app-shell.sidebar-collapsed .student-brand{justify-content:center;padding:0 0 22px}
+.student-app-shell.sidebar-collapsed .student-brand b,.student-app-shell.sidebar-collapsed .student-nav-label,.student-app-shell.sidebar-collapsed .student-nav-item span,.student-app-shell.sidebar-collapsed .student-signout span{display:none}
+.student-app-shell.sidebar-collapsed .student-nav-item,.student-app-shell.sidebar-collapsed .student-signout{width:100%;justify-content:center;padding:0}
+.student-app-shell.sidebar-collapsed .student-sidebar-heading{flex-direction:column-reverse}
+.student-app-shell.sidebar-collapsed .student-side-bottom{position:static;border-top:1px solid #edf0ee;padding-top:12px}
+@media(max-width:800px){
+  .admin-shell:not(.sidebar-collapsed){grid-template-columns:minmax(178px,200px) minmax(0,1fr)}
+  .admin-shell:not(.sidebar-collapsed) .admin-brand{justify-content:flex-start;padding:0 5px 18px;font-size:10px}
+  .admin-shell:not(.sidebar-collapsed) .admin-brand small{display:none}
+  .admin-shell:not(.sidebar-collapsed) .admin-sidebar-heading{flex-direction:row}
+  .admin-shell:not(.sidebar-collapsed) .admin-nav-label{display:block}
+  .admin-shell:not(.sidebar-collapsed) .admin-nav-item{justify-content:flex-start;padding:0 9px;font-size:10px}
+  .admin-shell:not(.sidebar-collapsed) .admin-nav-item span{display:inline}
+  .admin-shell:not(.sidebar-collapsed) .admin-user{justify-content:flex-start;padding:12px 5px}
+  .admin-shell:not(.sidebar-collapsed) .admin-user div{display:block}
+  .admin-shell:not(.sidebar-collapsed) .admin-student-link{display:flex;font-size:10px;justify-content:flex-start}
+  .admin-shell.sidebar-collapsed{grid-template-columns:62px minmax(0,1fr)}
+}
+@media(max-width:700px){
+  .student-app-shell.sidebar-collapsed{grid-template-columns:minmax(0,1fr)}
+  .student-app-shell.sidebar-collapsed .student-side{display:flex;flex-direction:row;align-items:center;gap:5px;padding:10px;min-height:0}
+  .student-app-shell.sidebar-collapsed .student-sidebar-heading{flex:0 0 auto;flex-direction:row-reverse;gap:6px}
+  .student-app-shell.sidebar-collapsed .student-brand{min-width:0;padding:0}
+  .student-app-shell.sidebar-collapsed .student-brand b{display:none}
+  .student-app-shell.sidebar-collapsed .student-nav-item{width:40px;height:40px;flex:0 0 40px;margin:0;padding:0;justify-content:center}
+  .student-app-shell.sidebar-collapsed .student-side-bottom{position:static;margin-left:auto;padding:0;border:0}
+  .student-app-shell.sidebar-collapsed .student-signout{width:40px;height:40px;padding:0}
+  .student-app-shell.sidebar-collapsed .student-sidebar-heading .sidebar-collapse-toggle{width:30px;height:30px}
+  .admin-shell:not(.sidebar-collapsed){grid-template-columns:minmax(158px,175px) minmax(0,1fr)}
+  .admin-shell.sidebar-collapsed{grid-template-columns:54px minmax(0,1fr)}
+  .admin-shell.sidebar-collapsed .admin-side{padding:14px 5px}
+}
+
+/* Shared dark theme for student, staff and authentication screens. */
+.theme-surface{color-scheme:light;transition:background-color .2s ease,color .2s ease}
+.theme-surface.theme-dark{color-scheme:dark;background:#111a16!important;color:#e7f0eb!important}
+.color-mode-toggle{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:0 11px;border:1px solid #dce7e1;border-radius:9px;background:#fff;color:#315c49;font:600 11px 'DM Sans',sans-serif;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
+.color-mode-toggle:hover{background:#edf6f1;border-color:#b8d4c5}
+.portal-entry>.color-mode-toggle{position:fixed;top:18px;right:20px;z-index:30}
+.admin-side-bottom .color-mode-toggle{width:100%;justify-content:flex-start;margin:0 0 10px}
+.student-side-bottom .color-mode-toggle{width:100%;justify-content:flex-start;margin:0 0 8px}
+.theme-dark .admin-side,.theme-dark .student-side,.theme-dark .admin-top,.theme-dark .student-workspace-top,.theme-dark .portal-entry-card,.theme-dark .login-card,.theme-dark .admin-panel,.theme-dark .admin-stats article,.theme-dark .admin-add-form,.theme-dark .student-panel,.theme-dark .student-dashboard-cards article,.theme-dark .student-profile-form,.theme-dark .student-application-card,.theme-dark .application-status-filters button,.theme-dark .application-timeline,.theme-dark .application-details,.theme-dark .advisor-panel,.theme-dark .student-empty,.theme-dark .onboarding-card,.theme-dark .inquiry-drawer,.theme-dark .admin-modal,.theme-dark .admin-table-wrap,.theme-dark .admin-filters,.theme-dark .university-card,.theme-dark .course-card,.theme-dark .entry-form-card{background:#1b2721!important;color:#e7f0eb!important;border-color:#34483d!important}
+.theme-dark .admin-content,.theme-dark .student-workspace,.theme-dark .student-dashboard-home,.theme-dark .student-panel-wrap{background:#111a16!important;color:#e7f0eb!important}
+.theme-dark h1,.theme-dark h2,.theme-dark h3,.theme-dark b,.theme-dark strong,.theme-dark .admin-heading h1,.theme-dark .login-card h1,.theme-dark .student-welcome h1,.theme-dark .student-panel h1,.theme-dark .admin-panel h2,.theme-dark .admin-panel h3,.theme-dark .timeline-step b,.theme-dark .activity-table td b{color:#e7f0eb!important}
+.theme-dark p,.theme-dark small,.theme-dark label,.theme-dark .admin-heading p,.theme-dark .student-panel-heading p,.theme-dark .student-welcome p,.theme-dark .timeline-step span,.theme-dark .activity-table td small,.theme-dark .student-empty span{color:#a8b9af}
+.theme-dark .student-welcome,.theme-dark .entry-hero,.theme-dark .onboarding-role{background:#20372c!important;border-color:#385746!important;color:#e7f0eb!important}
+.theme-dark .admin-nav-item,.theme-dark .student-nav-item,.theme-dark .admin-logout,.theme-dark .student-signout,.theme-dark .admin-user,.theme-dark .student-brand{color:#c0d0c6!important}
+.theme-dark .admin-nav-item.chosen,.theme-dark .student-nav-item.chosen{background:#244737!important;color:#8bd0a9!important}
+.theme-dark input,.theme-dark select,.theme-dark textarea,.theme-dark .admin-search,.theme-dark .activity-controls select,.theme-dark .directory-panel td select{background:#15201a!important;color:#e7f0eb!important;border-color:#40564a!important;color-scheme:dark}
+.theme-dark input::placeholder,.theme-dark textarea::placeholder{color:#91a399!important}
+.theme-dark table th,.theme-dark table td,.theme-dark .timeline-step,.theme-dark .student-side-bottom,.theme-dark .admin-side-bottom{border-color:#34483d!important}
+.theme-dark .admin-panel table,.theme-dark .inquiry-table{color:#d9e6de}
+.theme-dark .admin-text-button,.theme-dark .student-dashboard-cards button{color:#83c8a1!important}
+.theme-dark .admin-text-button:hover,.theme-dark .login-card .admin-text-button:hover{background:#263b30!important}
+.theme-dark .admin-notice,.theme-dark .admin-empty,.theme-dark .activity-empty{background:#20372c!important;color:#d8e8de!important;border-color:#385746!important}
+.theme-dark .color-mode-toggle{background:#1b2721;border-color:#40564a;color:#d8e8de}
+.theme-dark .color-mode-toggle:hover{background:#263b30;border-color:#5a7967}
+.theme-dark .onboarding-backdrop,.theme-dark .drawer-backdrop{background:rgba(3,9,6,.72)}
+.theme-dark .brand-loader-backdrop{background:rgba(12,20,16,.82)}
+.toast{position:fixed;right:24px;bottom:24px;z-index:10000;display:flex;align-items:center;gap:11px;width:min(430px,calc(100vw - 32px));padding:14px 15px;border:1px solid #dce9e1;border-radius:13px;background:#fff;color:#294438;box-shadow:0 16px 48px rgba(16,43,29,.2);font:500 13px 'DM Sans',sans-serif;animation:toast-enter .24s cubic-bezier(.2,.8,.2,1) both}
+.toast-success .toast-icon{color:#25805c}.toast-error{border-color:#f1d0cb;color:#713a34}.toast-error .toast-icon{color:#bd5145}.toast-info .toast-icon{color:#347658}.toast-message{flex:1;line-height:1.45}.toast-close{flex:none;width:30px;height:30px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:#77877e;cursor:pointer}.toast-close:hover{background:#f0f5f2;color:#294438}
+@keyframes toast-enter{from{opacity:0;transform:translate3d(24px,8px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+.theme-dark .toast{background:#1b2721;color:#e7f0eb;border-color:#40564a;box-shadow:0 16px 48px rgba(0,0,0,.42)}.theme-dark .toast-error{border-color:#70433e;color:#f1d9d5}.theme-dark .toast-close{color:#b8c8bf}.theme-dark .toast-close:hover{background:#2c3e34;color:#fff}
+@media(max-width:520px){.toast{right:12px;bottom:12px;width:calc(100vw - 24px);box-sizing:border-box;padding:12px;font-size:12px}}
+.admin-shell.sidebar-collapsed .admin-side-bottom .color-mode-toggle{justify-content:center;padding:0}
+.admin-shell.sidebar-collapsed .admin-side-bottom .color-mode-toggle span{display:none}
+.student-app-shell.sidebar-collapsed .student-side-bottom .color-mode-toggle{justify-content:center;padding:0}
+.student-app-shell.sidebar-collapsed .student-side-bottom .color-mode-toggle span{display:none}
+@media(max-width:700px){.student-side-bottom{position:static!important;display:flex;flex-direction:row;align-items:center;gap:5px;margin-left:auto;padding:0!important;border:0!important}.student-side-bottom .color-mode-toggle{width:38px;height:38px;min-height:38px;padding:0;margin:0}.student-side-bottom .color-mode-toggle span{display:none}.student-side-bottom .student-signout{width:38px;height:38px;padding:0;justify-content:center}.student-side-bottom .student-signout span{display:none}.portal-entry>.color-mode-toggle{top:10px;right:10px}}
