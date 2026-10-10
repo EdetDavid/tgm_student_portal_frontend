@@ -14,7 +14,14 @@ test.describe.serial('Student and admin portal', () => {
     await page.getByRole('textbox', { name: 'Full name' }).fill('  Amara Okafor  ');
     await page.getByRole('textbox', { name: 'Email address' }).fill(' AMARA@example.com ');
     await page.getByRole('textbox', { name: 'Username' }).fill('amara');
-    await page.getByLabel('Password', { exact: true }).fill('StrongPass123');
+    const password = page.getByLabel('Password', { exact: true });
+    await password.fill('StrongPass123');
+    await expect(password).toHaveAttribute('type', 'password');
+    await page.getByRole('button', { name: 'Show password' }).click();
+    await expect(password).toHaveAttribute('type', 'text');
+    await expect(password).toHaveValue('StrongPass123');
+    await page.getByRole('button', { name: 'Hide password' }).click();
+    await expect(password).toHaveAttribute('type', 'password');
     await page.getByRole('button', { name: 'Create account' }).click();
     await expect.poll(() => signupPayload).toBeTruthy();
     expect(signupPayload.full_name).toBe('Amara Okafor');

@@ -202,6 +202,306 @@
 .toast-success .toast-icon{color:#25805c}.toast-error{border-color:#f1d0cb;color:#713a34}.toast-error .toast-icon{color:#bd5145}.toast-info .toast-icon{color:#347658}.toast-message{flex:1;line-height:1.45}.toast-close{flex:none;width:30px;height:30px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:#77877e;cursor:pointer}.toast-close:hover{background:#f0f5f2;color:#294438}
 @keyframes toast-enter{from{opacity:0;transform:translate3d(24px,8px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
 .theme-dark .toast{background:#1b2721;color:#e7f0eb;border-color:#40564a;box-shadow:0 16px 48px rgba(0,0,0,.42)}.theme-dark .toast-error{border-color:#70433e;color:#f1d9d5}.theme-dark .toast-close{color:#b8c8bf}.theme-dark .toast-close:hover{background:#2c3e34;color:#fff}
+
+/* High-contrast dark surfaces shared by every role and student application step. */
+.theme-dark .form-wrap,
+.theme-dark .application-layout,
+.theme-dark .application-summary,
+.theme-dark .student-application-card,
+.theme-dark .course-results,
+.theme-dark .course-result,
+.theme-dark .course-offering-card,
+.theme-dark .student-profile-form,
+.theme-dark .application-details,
+.theme-dark .application-timeline,
+.theme-dark .application-status-filters button,
+.theme-dark .student-panel,
+.theme-dark .student-empty,
+.theme-dark .admin-panel,
+.theme-dark .admin-add-form,
+.theme-dark .admin-filters,
+.theme-dark .admin-table-wrap,
+.theme-dark .directory-panel,
+.theme-dark .activity-panel,
+.theme-dark .inquiry-drawer,
+.theme-dark .advisor-panel,
+.theme-dark .login-card,
+.theme-dark .portal-entry-card {
+  background: #1c2922 !important;
+  color: #edf5f0 !important;
+  border-color: #3b5044 !important;
+}
+.theme-dark .page-footer,
+.theme-dark .topbar,
+.theme-dark .student-dashboard-bar button,
+.theme-dark .advisor-suggestions button,
+.theme-dark .admin-outline:hover,
+.theme-dark .course-offering-card:not(.selected),
+.theme-dark .manage-row button,
+.theme-dark .user-delete-button {
+  background: #1c2922 !important;
+  color: #dce9e1 !important;
+  border-color: #3b5044 !important;
+}
+.theme-dark .admin-brand,
+.theme-dark .student-dashboard-bar b,
+.theme-dark .student-brand,
+.theme-dark .student-brand em,
+.theme-dark .page-footer,
+.theme-dark .secure,
+.theme-dark .student-dashboard-bar span {
+  color: #d2dfd7 !important;
+}
+.theme-dark .admin-brand small,
+.theme-dark .admin-nav-label,
+.theme-dark .student-nav-label,
+.theme-dark .admin-stats article span,
+.theme-dark .admin-stats article small,
+.theme-dark .event-stat > div:first-child span,
+.theme-dark .manage-head > span,
+.theme-dark .manage-head .admin-muted,
+.theme-dark .student-nav-label,
+.theme-dark .page-footer small {
+  color: #b5c5bb !important;
+}
+.theme-dark .application-summary .summary-top,
+.theme-dark .application-summary .summary-row,
+.theme-dark .application-details .details-heading,
+.theme-dark .student-application-card-head,
+.theme-dark .student-application-message,
+.theme-dark .admin-panel th,
+.theme-dark .admin-panel td,
+.theme-dark .inquiry-drawer dl,
+.theme-dark .advisor-panel header,
+.theme-dark .advisor-suggestions,
+.theme-dark .advisor-panel form {
+  border-color: #3b5044 !important;
+}
+.theme-dark .application-summary .summary-total strong,
+.theme-dark .course-offering-card em,
+.theme-dark .application-details .details-heading small,
+.theme-dark .student-panel-heading small,
+.theme-dark .student-welcome small,
+.theme-dark .admin-kicker,
+.theme-dark .report-eyebrow {
+  color: #9be0b8 !important;
+}
+.theme-dark .student-brand span,
+.theme-dark .admin-brand > span,
+.theme-dark .admin-user > span {
+  background: #294638 !important;
+  color: #b5ebca !important;
+}
+.theme-dark .form-wrap h1,
+.theme-dark .form-wrap h2,
+.theme-dark .form-wrap h3,
+.theme-dark .form-wrap b,
+.theme-dark .application-summary b,
+.theme-dark .application-details dd,
+.theme-dark .application-details h2,
+.theme-dark .student-application-card-head h2,
+.theme-dark .student-application-facts b,
+.theme-dark .admin-panel td,
+.theme-dark .admin-panel h2,
+.theme-dark .admin-panel h3,
+.theme-dark .inquiry-drawer dd,
+.theme-dark .advisor-panel header b,
+.theme-dark .course-result,
+.theme-dark .course-offering-card {
+  color: #edf5f0 !important;
+}
+.theme-dark .form-wrap p,
+.theme-dark .form-wrap small,
+.theme-dark .form-wrap label,
+.theme-dark .application-summary small,
+.theme-dark .application-summary p,
+.theme-dark .application-details dt,
+.theme-dark .student-application-card small,
+.theme-dark .student-application-message,
+.theme-dark .course-result small,
+.theme-dark .admin-panel td small,
+.theme-dark .admin-panel th,
+.theme-dark .inquiry-drawer dt,
+.theme-dark .inquiry-drawer > p,
+.theme-dark .advisor-panel header small {
+  color: #b5c5bb !important;
+}
+.theme-dark .application-stepper .stepper-item,
+.theme-dark .application-stepper .stepper-item b,
+.theme-dark .application-stepper .stepper-item span,
+.theme-dark .form-wrap .step-label,
+.theme-dark .form-wrap .eyebrow {
+  color: #b5c5bb !important;
+}
+.theme-dark .application-stepper .stepper-item.current,
+.theme-dark .application-stepper .stepper-item.complete,
+.theme-dark .application-stepper .stepper-item.current b,
+.theme-dark .application-stepper .stepper-item.complete b {
+  color: #9be0b8 !important;
+}
+.theme-dark .application-stepper,
+.theme-dark .form-wrap hr,
+.theme-dark .application-stepper .stepper-item span {
+  border-color: #3b5044 !important;
+}
+.theme-dark .student-nav-item.active,
+.theme-dark .student-nav-item:hover,
+.theme-dark .admin-nav-item.chosen,
+.theme-dark .application-status-filters button.selected,
+.theme-dark .course-result:hover,
+.theme-dark .course-result.active,
+.theme-dark .course-offering-card.selected {
+  background: #294638 !important;
+  color: #a5e8bf !important;
+  border-color: #557b63 !important;
+}
+.theme-dark .application-status-filters button span,
+.theme-dark .summary-top > span,
+.theme-dark .student-application-card .student-status-badge {
+  background: #2a4033 !important;
+  color: #c4ead1 !important;
+}
+.theme-dark input,
+.theme-dark select,
+.theme-dark textarea,
+.theme-dark .admin-search,
+.theme-dark .activity-controls select,
+.theme-dark .directory-panel td select {
+  background: #121c17 !important;
+  color: #f0f6f2 !important;
+  border-color: #50685a !important;
+  color-scheme: dark;
+}
+.theme-dark input::placeholder,
+.theme-dark textarea::placeholder {
+  color: #a7b8ad !important;
+  opacity: 1;
+}
+.theme-dark .admin-outline,
+.theme-dark .admin-pagination button,
+.theme-dark .sidebar-collapse-toggle,
+.theme-dark .admin-entry {
+  background: #202f27 !important;
+  color: #c9ebd4 !important;
+  border-color: #50685a !important;
+}
+.theme-dark .admin-pagination,
+.theme-dark .admin-muted,
+.theme-dark .student-online,
+.theme-dark .admin-online,
+.theme-dark .student-workspace-top > div > span,
+.theme-dark .admin-top > div > span {
+  color: #b5c5bb !important;
+}
+.theme-dark .bar-row > div,
+.theme-dark .capacity-track {
+  background: #33483b !important;
+}
+.theme-dark .status-pill.new { background: #45391f !important; color: #f1d28a !important; }
+.theme-dark .status-pill.contacted { background: #203b50 !important; color: #a9d9f5 !important; }
+.theme-dark .status-pill.converted { background: #204430 !important; color: #a6e2b8 !important; }
+.theme-dark .status-pill.closed { background: #343d38 !important; color: #d0d9d3 !important; }
+.theme-dark .student-status-badge.status-contacted { background: #203b50 !important; color: #b6e0f7 !important; }
+.theme-dark .student-status-badge.status-converted { background: #204430 !important; color: #b1e8c0 !important; }
+.theme-dark .student-status-badge.status-closed { background: #343d38 !important; color: #d0d9d3 !important; }
+.theme-dark .admin-error,
+.theme-dark .application-load-error,
+.theme-dark .entry-error {
+  background: #3a2422 !important;
+  color: #ffd0c8 !important;
+  border-color: #805149 !important;
+}
+.theme-dark .report-card {
+  background: #1c2922 !important;
+  color: #edf5f0 !important;
+  border-color: #3b5044 !important;
+}
+.theme-dark .report-card h3,
+.theme-dark .pie-number,
+.theme-dark .legend-value b,
+.theme-dark .bar-value,
+.theme-dark .mobile-bar-heading b {
+  color: #edf5f0 !important;
+  fill: #edf5f0 !important;
+}
+.theme-dark .report-card header p,
+.theme-dark .report-eyebrow,
+.theme-dark .legend-value small,
+.theme-dark .legend-scroll-hint,
+.theme-dark .bar-label,
+.theme-dark .bar-axis,
+.theme-dark .pie-caption,
+.theme-dark .report-empty,
+.theme-dark .report-scope,
+.theme-dark .mobile-bar-heading {
+  color: #b5c5bb !important;
+  fill: #b5c5bb !important;
+}
+.theme-dark .pie-legend button {
+  background: #1c2922 !important;
+  color: #dce9e1 !important;
+  border-color: #3b5044 !important;
+}
+.theme-dark .pie-legend button:hover,
+.theme-dark .mobile-course-bars button:hover {
+  background: #263a2e !important;
+}
+.theme-dark .report-empty {
+  background: #15201a !important;
+  border: 1px solid #3b5044;
+}
+.theme-dark .report-bars .bar-axis + line,
+.theme-dark .report-bars line,
+.theme-dark .trend-chart line {
+  stroke: #3b5044 !important;
+}
+.theme-dark .trend-chart polyline {
+  stroke: #7fd3a1 !important;
+}
+.theme-dark .trend-chart circle {
+  fill: #7fd3a1 !important;
+}
+.theme-dark .report-bars rect[fill="#f0f5f2"] {
+  fill: #33483b !important;
+}
+.theme-dark .report-bar-row:focus .bar-label {
+  fill: #a5e8bf !important;
+}
+.theme-dark .advisor-panel header {
+  background: #243a2e !important;
+}
+.theme-dark .advisor-panel header button {
+  color: #c2d3c8 !important;
+}
+.theme-dark .advisor-messages {
+  background: #15201a !important;
+}
+.theme-dark .advisor-messages p:not(.user) {
+  background: #263d30 !important;
+  color: #e2eee6 !important;
+}
+.theme-dark .advisor-messages p.user {
+  background: #247c5d !important;
+  color: #fff !important;
+}
+.theme-dark .course-offering-card.selected {
+  background: #294638 !important;
+  color: #a5e8bf !important;
+  border-color: #6b9a79 !important;
+}
+.theme-dark .admin-filters label,
+.theme-dark .filter-grid label,
+.theme-dark .intake-fields legend,
+.theme-dark .intake-fields label,
+.theme-dark .manage-row > div,
+.theme-dark .manage-row > span,
+.theme-dark .manage-row small,
+.theme-dark .bar-row,
+.theme-dark .inquiry-tools > span,
+.theme-dark .inquiry-table td:nth-child(1) {
+  color: #b5c5bb !important;
+}
+.theme-dark :focus-visible { outline-color: #9be0b8; }
 @media(max-width:520px){.toast{right:12px;bottom:12px;width:calc(100vw - 24px);box-sizing:border-box;padding:12px;font-size:12px}}
 .admin-shell.sidebar-collapsed .admin-side-bottom .color-mode-toggle{justify-content:center;padding:0}
 .admin-shell.sidebar-collapsed .admin-side-bottom .color-mode-toggle span{display:none}

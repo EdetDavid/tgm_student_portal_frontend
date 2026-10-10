@@ -459,6 +459,7 @@ export default function Admin({ onStudent, darkMode, onToggleTheme }) {
   const [newOrganisationCode, setNewOrganisationCode] = useState("");
   const [showSignupOrganisationCode, setShowSignupOrganisationCode] = useState(false);
   const [showSignupAccessCode, setShowSignupAccessCode] = useState(false);
+  const [showStaffPassword, setShowStaffPassword] = useState(false);
   const [codesNeedRotation, setCodesNeedRotation] = useState({ access: false, organisation: false });
 
   function notify(message, type = "success") {
@@ -859,16 +860,19 @@ export default function Admin({ onStudent, darkMode, onToggleTheme }) {
           </label>
           <label>
             Password
-            <input
-              required
-              name="password"
-              type="password"
-              value={loginForm.password}
-              onChange={(e) =>
-                setLoginForm({ ...loginForm, password: e.target.value })
-              }
-              autoComplete="current-password"
-            />
+            <div className="secret-input-wrap login-password-wrap">
+              <input
+                required
+                name="password"
+                type={showStaffPassword ? "text" : "password"}
+                value={loginForm.password}
+                onChange={(e) =>
+                  setLoginForm({ ...loginForm, password: e.target.value })
+                }
+                autoComplete={signupMode ? "new-password" : "current-password"}
+              />
+              <button type="button" className="secret-toggle" aria-label={showStaffPassword ? "Hide password" : "Show password"} aria-pressed={showStaffPassword} onClick={() => setShowStaffPassword(value => !value)}>{showStaffPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>
+            </div>
           </label>
           <button className="admin-primary" disabled={saving}>
             {saving ? "Please wait..." : signupMode ? "Create account" : "Sign in"}

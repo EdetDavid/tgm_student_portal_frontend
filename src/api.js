@@ -17,13 +17,19 @@ function errorMessage(data) {
 
 async function fetchJSON(url, options = {}) {
   let response;
+  const requestTimeout = AbortSignal.timeout(20000);
+  const signal = options.signal
+    ? AbortSignal.any([options.signal, requestTimeout])
+    : requestTimeout;
   try {
     response = await fetch(url, {
       credentials: "same-origin",
-      signal: AbortSignal.timeout(15000),
       ...options,
+      signal,
     });
   } catch (error) {
+    // A route change should cancel its request quietly, not become a timeout toast.
+    if (options.signal?.aborted) throw error;
     if (import.meta.env.DEV) console.error("[Student Portal API] Request failed", { url, error });
     if (error.name === "AbortError" || error.name === "TimeoutError") {
       throw new ApiError("The request took too long. Please try again.", 0);
@@ -58,5 +64,15 @@ export async function api(url, options = {}) {
     headers["X-CSRFToken"] = csrfToken;
   }
   if (options.body != null) headers["Content-Type"] = "application/json";
-  return fetchJSON(url, { ...options, method, headers });
+  const requestOptions = { ...options, method, headers };
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await fetchJSON(url, requestOptions);
+    } catch (error) {
+      const transientReadFailure = method === "GET" && (error.status === 0 || error.status >= 500);
+      if (!transientReadFailure || attempt >= 1 || options.signal?.aborted) throw error;
+      // Retry idempotent reads once for serverless cold starts or brief network blips.
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
 }

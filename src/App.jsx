@@ -81,6 +81,7 @@ function PortalEntry({ onContinue, onAdmin, darkMode, onToggleTheme }) {
   const [busy, setBusy] = useState(false);
   const [showOrganisationCode, setShowOrganisationCode] = useState(false);
   const [showSuperAdminCode, setShowSuperAdminCode] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const isStudentSignup = mode === "signup" && role.trim().toLowerCase() === "student";
   async function submit(e) {
     e.preventDefault(); setError("");
@@ -120,7 +121,7 @@ function PortalEntry({ onContinue, onAdmin, darkMode, onToggleTheme }) {
         {mode === "signup" && ["Admin", "Counsellor"].includes(role) && <label>Organisation code<div className="secret-input-wrap"><input required type={showOrganisationCode ? "text" : "password"} value={form.organisation_code || ""} onChange={e => setForm({...form, organisation_code:e.target.value})} /><button type="button" className="secret-toggle" aria-label={showOrganisationCode ? "Hide organisation code" : "Show organisation code"} onClick={() => setShowOrganisationCode(value => !value)}>{showOrganisationCode ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></label>}
         {mode === "signup" && role === "Super Admin" && <label>Super Admin access code<div className="secret-input-wrap"><input required type={showSuperAdminCode ? "text" : "password"} value={form.access_code || ""} onChange={e => setForm({...form, access_code:e.target.value})} /><button type="button" className="secret-toggle" aria-label={showSuperAdminCode ? "Hide Super Admin access code" : "Show Super Admin access code"} onClick={() => setShowSuperAdminCode(value => !value)}>{showSuperAdminCode ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></label>}
         <label>Username<input required value={form.username} onChange={e => setForm({...form, username:e.target.value})} /></label>
-        <label>Password<input required minLength="8" type="password" value={form.password} onChange={e => setForm({...form, password:e.target.value})} /></label>
+        <label>Password<div className="secret-input-wrap"><input required minLength="8" type={showPassword ? "text" : "password"} autoComplete={mode === "signup" ? "new-password" : "current-password"} value={form.password} onChange={e => setForm({...form, password:e.target.value})} /><button type="button" className="secret-toggle" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></label>
         <button className="entry-primary" disabled={busy}>{busy ? "Please wait..." : mode === "signup" ? "Create account" : "Sign in"} <ArrowRight size={16} /></button>
       </form>
       {role !== "Student" && <button className="entry-link" onClick={onAdmin}>Use the staff portal</button>}
