@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   BarChart3,
+  Activity,
   BookOpen,
   CalendarDays,
   Download,
@@ -441,13 +442,18 @@ export default function Admin({ onStudent }) {
   const [notice, setNotice] = useState("");
   const [catalogSearch, setCatalogSearch] = useState("");
   const [directory, setDirectory] = useState([]);
+  const [activityEntries, setActivityEntries] = useState([]);
+  const [activityActions, setActivityActions] = useState([]);
+  const [activityTotal, setActivityTotal] = useState(0);
+  const [activityPages, setActivityPages] = useState(1);
+  const [activitySearch, setActivitySearch] = useState("");
+  const [activityAction, setActivityAction] = useState("");
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [newAccessCode, setNewAccessCode] = useState("");
   const [newOrganisationCode, setNewOrganisationCode] = useState("");
   const [showSignupOrganisationCode, setShowSignupOrganisationCode] = useState(false);
   const [showSignupAccessCode, setShowSignupAccessCode] = useState(false);
-  const [showNewOrganisationCode, setShowNewOrganisationCode] = useState(false);
-  const [showNewAccessCode, setShowNewAccessCode] = useState(false);
+  const [codesNeedRotation, setCodesNeedRotation] = useState({ access: false, organisation: false });
 
   async function refresh() {
     try {
@@ -480,20 +486,43 @@ export default function Admin({ onStudent }) {
   }, []);
 
   useEffect(() => {
-    if (!user || !["Overview", "Reports", "Inquiries", "Users", "Students"].includes(section)) return;
+    if (!user || user.role !== "Super Admin" || section !== "Access") return;
+    let active = true;
+    Promise.all([api("/api/admin/access-code/"), api("/api/admin/organisation-code/")])
+      .then(([access, organisation]) => {
+        if (!active) return;
+        setNewAccessCode(access.access_code || "");
+        setNewOrganisationCode(organisation.organisation_code || "");
+        setCodesNeedRotation({ access: access.needs_rotation, organisation: organisation.needs_rotation });
+      })
+      .catch(error => { if (active) setNotice(error.message); });
+    return () => { active = false; };
+  }, [section, user]);
+
+  useEffect(() => {
+    if (!user || !["Overview", "Reports", "Inquiries", "Users", "Students", "Activity"].includes(section)) return;
     const controller = new AbortController();
     setLoading(true);
     setLoadError("");
     const timer = setTimeout(async () => {
       try {
-        const endpoint = section === "Inquiries" ? "inquiries" : section === "Users" ? "users" : section === "Students" ? "students" : "dashboard";
+        const endpoint = section === "Inquiries" ? "inquiries" : section === "Users" ? "users" : section === "Students" ? "students" : section === "Activity" ? "activity" : "dashboard";
+        const params = section === "Activity"
+          ? queryString({ q: activitySearch, action: activityAction }, { page })
+          : queryString(filters, { page, ordering });
         const result = await api(
-          `/api/admin/${endpoint}/?${queryString(filters, { page, ordering })}`,
+          `/api/admin/${endpoint}/?${params}`,
           { signal: controller.signal },
         );
         if (section === "Inquiries") setInquiries(result);
         else if (section === "Users") setDirectory(result.users);
         else if (section === "Students") setDirectory(result.students);
+        else if (section === "Activity") {
+          setActivityEntries(result.activities);
+          setActivityActions(result.actions);
+          setActivityTotal(result.total);
+          setActivityPages(result.pages);
+        }
         else setData(result);
       } catch (error) {
         if (error.name !== "AbortError") {
@@ -508,7 +537,7 @@ export default function Admin({ onStudent }) {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [user?.username, section, filters, page, ordering, revision]);
+  }, [user?.username, section, filters, page, ordering, revision, activitySearch, activityAction]);
 
   function changeFilter(key, value) {
     setFilters((current) => ({ ...current, [key]: value }));
@@ -520,6 +549,7 @@ export default function Admin({ onStudent }) {
   }
   function navigate(next) {
     setSection(next);
+    setPage(1);
     setSelected(null);
     setCatalogSearch("");
   }
@@ -586,7 +616,7 @@ export default function Admin({ onStudent }) {
     setSaving(true);
     try {
       await api("/api/admin/access-code/", { method: "POST", body: JSON.stringify({ access_code: newAccessCode }) });
-      setNewAccessCode("");
+      setCodesNeedRotation(current => ({ ...current, access: false }));
       setNotice("Super Admin access code updated");
     } catch (error) { setNotice(error.message); }
     finally { setSaving(false); }
@@ -597,7 +627,7 @@ export default function Admin({ onStudent }) {
     setSaving(true);
     try {
       await api("/api/admin/organisation-code/", { method: "POST", body: JSON.stringify({ organisation_code: newOrganisationCode }) });
-      setNewOrganisationCode("");
+      setCodesNeedRotation(current => ({ ...current, organisation: false }));
       setNotice("Organisation code updated");
     } catch (error) { setNotice(error.message); }
     finally { setSaving(false); }
@@ -799,8 +829,8 @@ export default function Admin({ onStudent }) {
     ["Courses", BookOpen],
     ["Universities", School],
     ["Events", CalendarDays],
-    ...(user.role === "Super Admin" ? [["Users", Users]] : [["Students", Users]]),
-    ...(user.role === "Super Admin" ? [["Access", ShieldCheck]] : []),
+    ...(user.role === "Super Admin" ? [["Users", Users], ["Students", Users]] : [["Students", Users]]),
+    ...(user.role === "Super Admin" ? [["Activity", Activity], ["Access", ShieldCheck]] : []),
   ];
   const filtered = Object.values(filters).some(Boolean);
   const visibleCourses = courses.filter((course) =>
@@ -886,6 +916,8 @@ export default function Admin({ onStudent }) {
                   ? "A live snapshot of student interest and event activity."
                   : section === "Inquiries"
                     ? "Search, review and follow up with prospective students."
+                    : section === "Activity"
+                      ? "Review an audit trail of sign-ins, submissions and management changes."
                     : section === "Courses"
                       ? "Manage courses, tuition and available intakes."
                       : "Manage exhibition dates, venues and capacity."}
@@ -923,7 +955,7 @@ export default function Admin({ onStudent }) {
           {loading && (
             <LoadingIndicator label={`Loading ${section.toLowerCase()}`} />
           )}
-          {loadError && ["Overview", "Reports", "Inquiries"].includes(section) && (
+          {loadError && ["Overview", "Reports", "Inquiries", "Activity"].includes(section) && (
             <div className="admin-error" role="alert">
               {loadError}{" "}
               <button
@@ -1286,18 +1318,40 @@ export default function Admin({ onStudent }) {
               {!directory.length && <p className="admin-muted">No records found.</p>}
             </section>
           )}
+          {section === "Activity" && user.role === "Super Admin" && (
+            <section className="admin-panel activity-panel">
+              <div className="manage-head">
+                <div><h3>Application activity</h3><p className="admin-muted">A record of important actions across the portal. Secrets and private notes are never included.</p></div>
+                <span>{activityTotal} records</span>
+              </div>
+              <div className="activity-controls">
+                <label className="admin-search"><Search size={16}/><input aria-label="Search activity" placeholder="Search user, action or record" value={activitySearch} onChange={event => { setActivitySearch(event.target.value); setPage(1); }}/></label>
+                <select aria-label="Filter activity by action" value={activityAction} onChange={event => { setActivityAction(event.target.value); setPage(1); }}><option value="">All activity types</option>{activityActions.map(action => <option key={action} value={action}>{action.replaceAll(".", " · ")}</option>)}</select>
+              </div>
+              <div className="table-scroll"><table className="inquiry-table activity-table"><thead><tr><th>WHEN</th><th>ACTOR</th><th>ACTIVITY</th><th>RECORD</th></tr></thead><tbody>
+                {activityEntries.map(item => {
+                  const details = Object.entries(item.details || {}).map(([key, value]) => `${key.replaceAll("_", " ")}: ${typeof value === "object" ? JSON.stringify(value) : value}`).join(" · ");
+                  return <tr key={item.id}><td>{new Date(item.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}</td><td><b>{item.actor}</b><small className="activity-role">{item.role}</small></td><td><b>{item.action.replaceAll(".", " · ")}</b><small>{item.summary}</small></td><td><b>{item.entity_type}{item.entity_id ? ` · ${item.entity_id}` : ""}</b>{details && <small>{details}</small>}</td></tr>;
+                })}
+              </tbody></table></div>
+              {!activityEntries.length && !loading && <p className="admin-muted activity-empty">No activity matches these filters yet.</p>}
+              <div className="admin-pagination"><span>Page {page} of {activityPages}</span><div><button aria-label="Previous activity page" disabled={loading || page <= 1} onClick={() => setPage(current => current - 1)}><ChevronLeft size={16}/></button><button aria-label="Next activity page" disabled={loading || page >= activityPages} onClick={() => setPage(current => current + 1)}><ChevronRight size={16}/></button></div></div>
+            </section>
+          )}
           {section === "Access" && user.role === "Super Admin" && (
             <section className="admin-panel access-panel">
               <h3>Super Admin access</h3>
-              <p className="admin-muted">Rotate the secret code required when creating a new Super Admin account.</p>
+              <p className="admin-muted">Current code is shown below. Edit it here and save to replace the code required for new Super Admin accounts.</p>
+              {codesNeedRotation.access && <p className="admin-muted">The existing code was stored as a one-way hash and cannot be recovered. Enter a replacement code below.</p>}
               <form onSubmit={updateAccessCode} className="admin-add-form">
-                <div className="secret-input-wrap"><input type={showNewAccessCode ? "text" : "password"} minLength="8" required value={newAccessCode} onChange={e => setNewAccessCode(e.target.value)} placeholder="New access code" /><button type="button" className="secret-toggle" aria-label={showNewAccessCode ? "Hide access code" : "Show access code"} onClick={() => setShowNewAccessCode(value => !value)}>{showNewAccessCode ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div>
+                <input type="text" autoComplete="off" minLength="8" required value={newAccessCode} onChange={e => setNewAccessCode(e.target.value)} placeholder="Super Admin access code" />
                 <button className="admin-primary" disabled={saving}>{saving ? "Saving..." : "Update access code"}</button>
               </form>
               <h3>Organisation code</h3>
-              <p className="admin-muted">Rotate the code required when Admin and Counsellor accounts are registered.</p>
+              <p className="admin-muted">Current code is shown below. Edit it here and save to replace the code required for Admin and Counsellor registrations.</p>
+              {codesNeedRotation.organisation && <p className="admin-muted">The existing code was stored as a one-way hash and cannot be recovered. Enter a replacement code below.</p>}
               <form onSubmit={updateOrganisationCode} className="admin-add-form">
-                <div className="secret-input-wrap"><input type={showNewOrganisationCode ? "text" : "password"} minLength="8" required value={newOrganisationCode} onChange={e => setNewOrganisationCode(e.target.value)} placeholder="New organisation code" /><button type="button" className="secret-toggle" aria-label={showNewOrganisationCode ? "Hide organisation code" : "Show organisation code"} onClick={() => setShowNewOrganisationCode(value => !value)}>{showNewOrganisationCode ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div>
+                <input type="text" autoComplete="off" minLength="8" required value={newOrganisationCode} onChange={e => setNewOrganisationCode(e.target.value)} placeholder="Organisation code" />
                 <button className="admin-primary" disabled={saving}>{saving ? "Saving..." : "Update organisation code"}</button>
               </form>
             </section>

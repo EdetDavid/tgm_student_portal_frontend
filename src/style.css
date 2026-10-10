@@ -87,3 +87,33 @@
 @keyframes brand-loader-float { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-4px) scale(1.04); } }
 @keyframes brand-loader-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .brand-loader-mark, .brand-loader-mark::after { animation-duration: 3s; } }
+
+/* Student application tracker */
+.application-status-filters{display:flex;gap:8px;overflow-x:auto;padding:3px 1px 12px;margin-bottom:12px;scrollbar-width:thin}
+.application-status-filters button{flex:0 0 auto;display:flex;align-items:center;gap:9px;border:1px solid #dfe9e3;border-radius:22px;background:#fff;color:#62736a;padding:9px 13px;font:600 10px 'DM Sans',sans-serif;cursor:pointer}
+.application-status-filters button.selected{background:#eaf5ef;border-color:#8cbfa5;color:#237653}
+.application-status-filters button span{display:grid;place-items:center;min-width:19px;height:19px;border-radius:12px;background:#f0f4f1;color:#66776e;font-size:9px}
+.student-application-list{display:grid;gap:13px;max-width:850px}
+.student-application-card{background:#fff;border:1px solid #e3ebe6;border-radius:14px;padding:19px 20px;box-shadow:0 4px 16px #1d463408}
+.student-application-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:14px;border-bottom:1px solid #edf1ee}
+.student-application-card-head small{font-size:8px;letter-spacing:.1em;color:#7d9387;font-weight:700}
+.student-application-card-head h2{margin:6px 0 0;color:#294638;font:700 16px Manrope,sans-serif}
+.student-status-badge{flex:0 0 auto;border-radius:18px;padding:7px 10px;background:#eaf5ef;color:#267653;font-size:9px;font-weight:700}
+.student-status-badge.status-contacted{background:#edf4fa;color:#376b91}.student-status-badge.status-converted{background:#e8f6ed;color:#26744d}.student-status-badge.status-closed{background:#f0f2f1;color:#66736c}
+.student-application-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px 18px;padding-top:15px}
+.student-application-facts small,.student-application-facts b{display:block}
+.student-application-facts small{color:#8a9991;font-size:9px;margin-bottom:4px}.student-application-facts b{color:#354b3f;font-size:10px;font-weight:600;overflow-wrap:anywhere}
+.student-application-message{border-top:1px solid #edf1ee;padding-top:12px;margin:14px 0 0;color:#68796f;font-size:10px;line-height:1.5}
+.application-load-error{max-width:650px;padding:13px;border:1px solid #f0d2ce;border-radius:9px;background:#fff4f2;color:#944c42;font-size:11px}
+
+/* Keep the advisor conversation, suggestions and composer within the viewport. */
+.advisor-panel{display:flex;flex-direction:column;height:min(500px,calc(100dvh - 32px));max-height:calc(100dvh - 32px)}
+.advisor-messages{height:auto;min-height:0;max-height:none;flex:1 1 auto;overscroll-behavior:contain;scroll-behavior:smooth}
+.advisor-messages>div:last-child{height:1px}
+@media(max-width:600px){
+  .advisor-panel{right:10px;bottom:10px;width:calc(100vw - 20px);height:min(560px,calc(100dvh - 20px));max-height:calc(100dvh - 20px);border-radius:14px}
+  .advisor-panel header{padding:12px 14px}.advisor-messages{min-height:100px;padding:11px}.advisor-suggestions{padding:8px;gap:6px}.advisor-suggestions button{font-size:9px}
+  .advisor-panel form{padding:8px}.advisor-panel form input{height:40px;font-size:12px}.advisor-panel form button{min-width:42px}
+  .student-application-card{padding:15px}.student-application-facts{grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 12px}
+}
+@media(max-height:560px){.advisor-panel{max-height:calc(100dvh - 16px);bottom:8px}.advisor-messages{min-height:70px}.advisor-panel header{padding:9px 13px}.advisor-suggestions{padding:6px}.advisor-panel form{padding:7px}}

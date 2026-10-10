@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Admin from "./Admin.jsx";
 import LoadingIndicator from "./LoadingIndicator.jsx";
 import { api } from "./api.js";
@@ -118,8 +118,20 @@ function StudentDashboard({ children, onLogout }) {
   const [view, setView] = useState("Apply");
   const [profile, setProfile] = useState(() => JSON.parse(localStorage.getItem("student_profile") || '{"full_name":"","email":"","phone":"","student_location":""}'));
   const [saved, setSaved] = useState(false);
-  const reference = localStorage.getItem("student_application_reference");
-  const application = JSON.parse(localStorage.getItem("student_application_details") || "null");
+  const [applications, setApplications] = useState([]);
+  const [applicationsLoading, setApplicationsLoading] = useState(false);
+  const [applicationsError, setApplicationsError] = useState("");
+  useEffect(() => {
+    if (!["Overview", "Application status"].includes(view)) return;
+    const controller = new AbortController();
+    setApplicationsLoading(true);
+    setApplicationsError("");
+    api("/api/student/applications/", { signal: controller.signal })
+      .then(result => setApplications(result.applications || []))
+      .catch(error => { if (error.name !== "AbortError" && error.name !== "TimeoutError") setApplicationsError(error.message); })
+      .finally(() => { if (!controller.signal.aborted) setApplicationsLoading(false); });
+    return () => controller.abort();
+  }, [view]);
   function saveProfile(e) { e.preventDefault(); localStorage.setItem("student_profile", JSON.stringify(profile)); setSaved(true); setTimeout(() => setSaved(false), 2500); }
   return <div className="student-app-shell">
     <aside className="student-side"><a className="student-brand" href="/"><span><GraduationCap size={18}/></span><b>TGM Education <em>|</em> Student</b></a><small className="student-nav-label">MY SPACE</small>
@@ -127,12 +139,37 @@ function StudentDashboard({ children, onLogout }) {
       <div className="student-side-bottom"><button className="student-signout" onClick={onLogout}>Sign out</button></div>
     </aside>
     <main className="student-workspace"><header className="student-workspace-top"><div><span>MY SPACE /</span> {view}</div><span className="student-online"><i/> Signed in</span></header>
-      {view === 'Overview' && <section className="student-dashboard-home"><div className="student-welcome"><small>STUDENT DASHBOARD</small><h1>Keep your study plans moving.</h1><p>Search courses, submit an application and follow the next steps from one place.</p><button className="entry-primary" onClick={() => setView('Apply')}>Start an application <ArrowRight size={16}/></button></div><div className="student-dashboard-cards"><article><ClipboardList/><b>Applications</b><strong>{reference ? '1 active' : 'No applications yet'}</strong><button onClick={() => setView(reference ? 'Application status' : 'Apply')}>{reference ? 'Track application' : 'Apply now'}</button></article><article><UserRound/><b>Profile</b><strong>Keep your details up to date</strong><button onClick={() => setView('Profile')}>Update profile</button></article></div></section>}
+      {view === 'Overview' && <section className="student-dashboard-home"><div className="student-welcome"><small>STUDENT DASHBOARD</small><h1>Keep your study plans moving.</h1><p>Search courses, submit an application and follow the next steps from one place.</p><button className="entry-primary" onClick={() => setView('Apply')}>Start an application <ArrowRight size={16}/></button></div><div className="student-dashboard-cards"><article><ClipboardList/><b>Applications</b><strong>{applicationsLoading ? 'Loading…' : applications.length ? `${applications.length} application${applications.length === 1 ? '' : 's'}` : 'No applications yet'}</strong><button onClick={() => setView(applications.length ? 'Application status' : 'Apply')}>{applications.length ? 'Track application' : 'Apply now'}</button></article><article><UserRound/><b>Profile</b><strong>Keep your details up to date</strong><button onClick={() => setView('Profile')}>Update profile</button></article></div></section>}
       {view === 'Apply' && children}
       {view === 'Profile' && <section className="student-panel"><div className="student-panel-heading"><div><small>YOUR DETAILS</small><h1>Profile</h1><p>Keep your contact details current so our counsellors can reach you.</p></div></div><form className="student-profile-form" onSubmit={saveProfile}><label>Full name<input required value={profile.full_name} onChange={e => setProfile({...profile, full_name:e.target.value})}/></label><label>Email address<input required type="email" value={profile.email} onChange={e => setProfile({...profile, email:e.target.value})}/></label><label>Phone number<input required value={profile.phone} onChange={e => setProfile({...profile, phone:e.target.value})}/></label><label>Current city and country<input required placeholder="e.g. Lagos, Nigeria" value={profile.student_location} onChange={e => setProfile({...profile, student_location:e.target.value})}/></label><button className="entry-primary">{saved ? 'Profile saved' : 'Save changes'}</button></form></section>}
-      {view === 'Application status' && <section className="student-panel"><div className="student-panel-heading"><small>APPLICATION TRACKER</small><h1>Application status</h1><p>Follow your progress and know what happens next.</p></div>{reference ? <><div className="application-timeline"><div className="timeline-step done"><b>Interest submitted</b><span>Reference: {reference}</span></div><div className="timeline-step"><b>Counsellor review</b><span>Our team will contact you with guidance.</span></div><div className="timeline-step"><b>Application and visa support</b><span>Documents and next steps will appear here.</span></div></div><div className="application-details"><div className="details-heading"><div><small>SUBMISSION RECORD</small><h2>Application details</h2></div><span className="status-badge">Submitted</span></div><dl><dt>Reference</dt><dd>{reference}</dd><dt>Applicant</dt><dd>{application?.full_name || profile.full_name || 'Not provided'}</dd><dt>Email</dt><dd>{application?.email || profile.email || 'Not provided'}</dd><dt>Phone</dt><dd>{application?.phone || profile.phone || 'Not provided'}</dd><dt>Course</dt><dd>{application?.course_name || 'Selected course'}</dd><dt>Programme type</dt><dd>{application?.programme_type || 'Not provided'}</dd><dt>Intake</dt><dd>{application?.intake || 'Not provided'}</dd><dt>Study destination</dt><dd>{application?.destination_city ? `${application.destination_city}, ${application.destination}` : application?.destination || 'Not provided'}</dd><dt>Event</dt><dd>{application?.event_name || 'Selected event'}</dd><dt>Message</dt><dd>{application?.message || 'No message added'}</dd></dl></div></> : <div className="student-empty"><ClipboardList/><b>No application yet</b><span>Start by telling us what you want to study.</span><button className="entry-primary" onClick={() => setView('Apply')}>Start application</button></div>}</section>}
+      {view === 'Application status' && <StudentApplications applications={applications} loading={applicationsLoading} error={applicationsError} onApply={() => setView('Apply')} />}
     </main><StudentSupport />
   </div>;
+}
+
+const APPLICATION_STATUS_LABELS = { New: "Submitted", Contacted: "Contacted", Converted: "Converted", Closed: "Done" };
+const APPLICATION_STATUS_FILTERS = ["All", "Submitted", "Contacted", "Converted", "Done"];
+
+function StudentApplications({ applications, loading, error, onApply }) {
+  const [filter, setFilter] = useState("All");
+  const records = applications;
+  const visible = records.filter(item => filter === "All" || (APPLICATION_STATUS_LABELS[item.status] || item.status) === filter);
+  return <section className="student-panel">
+    <div className="student-panel-heading"><small>APPLICATION TRACKER</small><h1>Application status</h1><p>See each application and its latest follow-up status.</p></div>
+    <nav className="application-status-filters" aria-label="Filter applications by status">{APPLICATION_STATUS_FILTERS.map(label => <button key={label} type="button" className={filter === label ? "selected" : ""} onClick={() => setFilter(label)}>{label}<span>{label === "All" ? records.length : records.filter(item => (APPLICATION_STATUS_LABELS[item.status] || item.status) === label).length}</span></button>)}</nav>
+    {loading && <div className="student-empty"><b>Loading your applications…</b></div>}
+    {!loading && error && <div className="application-load-error" role="alert">{error}</div>}
+    {!loading && !error && visible.length > 0 && <div className="student-application-list">{visible.map(item => {
+      const label = APPLICATION_STATUS_LABELS[item.status] || item.status;
+      const destination = [item.destination_city, item.destination].filter(Boolean).join(", ");
+      return <article className="student-application-card" key={item.id || item.reference}>
+        <div className="student-application-card-head"><div><small>REFERENCE · {item.reference}</small><h2>{item.course || "Application"}</h2></div><span className={`student-status-badge status-${String(item.status).toLowerCase()}`}>{label}</span></div>
+        <div className="student-application-facts"><div><small>University</small><b>{item.university || "To be confirmed"}</b></div><div><small>Programme</small><b>{item.programme_type || "—"}</b></div><div><small>Intake</small><b>{item.intake || "—"}</b></div><div><small>Study destination</small><b>{destination || "—"}</b></div><div><small>Event</small><b>{item.event || "—"}</b></div><div><small>Submitted</small><b>{item.created_at ? new Date(item.created_at).toLocaleDateString() : "Saved on this device"}</b></div></div>
+        {item.message && <p className="student-application-message">Your note: {item.message}</p>}
+      </article>;
+    })}</div>}
+    {!loading && !error && !visible.length && <div className="student-empty"><ClipboardList/><b>{records.length ? `No ${filter.toLowerCase()} applications` : "No application yet"}</b><span>{records.length ? "Choose another status to see your applications." : "Start by telling us what you want to study."}</span>{!records.length && <button className="entry-primary" onClick={onApply}>Start application</button>}</div>}
+  </section>;
 }
 
 const ADVISOR_STOP_WORDS = new Set("a an and are about after all am at be can could do for from get give going have how i in is it me my of on or our please recommend should tell that the their them there these this to want what where which with would you your study course courses university universities country destination fee price cost tuition intake apply application application status".split(" "));
@@ -178,10 +215,19 @@ function recommendCourses(question, courses) {
 function StudentSupport() {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
+  const messagesEndRef = useRef(null);
+  const [studentFirstName, setStudentFirstName] = useState(() => {
+    try { return (JSON.parse(localStorage.getItem("student_profile") || "{}").full_name || "").trim().split(/\s+/)[0] || ""; }
+    catch { return ""; }
+  });
   const [catalogue, setCatalogue] = useState({ courses: [], events: [], destinations: [] });
   const [catalogueReady, setCatalogueReady] = useState(false);
   const [lastSuggestedCourses, setLastSuggestedCourses] = useState([]);
-  const [messages, setMessages] = useState([{ from: "bot", text: "Hi! Tell me what you’d like to study, where you’re considering, or what you want to know about applying. I’ll use the courses and partner locations currently listed in the portal." }]);
+  const [messages, setMessages] = useState(() => [{ from: "bot", text: `Hi${studentFirstName ? ` ${studentFirstName}` : ""}! Tell me what you’d like to study, where you’re considering, or what you want to know about applying. I can help with the live course catalogue.` }]);
+
+  useEffect(() => {
+    if (open) messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, open]);
 
   useEffect(() => {
     let current = true;
@@ -267,15 +313,29 @@ function StudentSupport() {
   function reply(text) {
     const value = text.trim();
     if (!value) return;
-    const directMatches = recommendCourses(value, catalogue.courses);
-    if (directMatches.length) setLastSuggestedCourses(directMatches);
-    const answer = buildAnswer(value, lastSuggestedCourses);
+    const introduction = value.match(/\b(?:(?:my name is|call me|i'm|im)\s+([\p{L}][\p{L}'’-]*)|i am\s+(?!(?:a|the|student|looking|interested|considering|trying|hoping|applying|studying|from|here|not)\b)([\p{L}][\p{L}'’-]*))/iu);
+    const greeting = /^(?:hi|hello|hey|good morning|good afternoon|good evening)[!.,\s]*$/i.test(value);
+    let answer;
+    if (introduction) {
+      const firstName = (introduction[1] || introduction[2]).replace(/[’'-]+$/, "");
+      setStudentFirstName(firstName);
+      const profile = JSON.parse(localStorage.getItem("student_profile") || "{}");
+      if (!profile.full_name) localStorage.setItem("student_profile", JSON.stringify({ ...profile, full_name: firstName }));
+      answer = `Nice to meet you, ${firstName}! I’ll keep that in mind. What would you like to study, or where are you hoping to go?`;
+    } else if (greeting) {
+      answer = `Hello${studentFirstName ? `, ${studentFirstName}` : ""}! How can I help with your study plans today? I can suggest courses, compare destinations, or explain how to apply.`;
+    } else {
+      const directMatches = recommendCourses(value, catalogue.courses);
+      if (directMatches.length) setLastSuggestedCourses(directMatches);
+      answer = buildAnswer(value, lastSuggestedCourses);
+      if (studentFirstName) answer = `${studentFirstName}, ${answer.charAt(0).toLowerCase()}${answer.slice(1)}`;
+    }
     setMessages(current => [...current, { from: "user", text: value }, { from: "bot", text: answer }]);
     setMessage("");
   }
   return <>
     <a className="whatsapp-support" href={`https://wa.me/${import.meta.env.VITE_WHATSAPP_NUMBER || "2348000000000"}?text=Hello%20TGM%20Education%2C%20I%20need%20help%20with%20studying%20abroad.`} target="_blank" rel="noreferrer"><MessageCircle size={18}/> WhatsApp support</a>
-    {open && <section className="advisor-panel" aria-label="Student advisor"><header><div><b>Study advisor</b><small>Guidance based on the live course catalogue</small></div><button onClick={() => setOpen(false)} aria-label="Close advisor">×</button></header><div className="advisor-messages" aria-live="polite">{messages.map((item, index) => <p key={index} className={item.from}>{item.text}</p>)}</div><div className="advisor-suggestions"><button onClick={() => reply("Recommend technology courses")}>Explore technology</button><button onClick={() => reply("Which courses are available in Canada?")}>Courses in Canada</button><button onClick={() => reply("How do I apply?")}>How to apply</button></div><form onSubmit={e => { e.preventDefault(); reply(message); }}><input value={message} onChange={e => setMessage(e.target.value)} placeholder="Ask about your study plans..."/><button aria-label="Send message"><Send size={15}/></button></form></section>}
+    {open && <section className="advisor-panel" aria-label="Student advisor"><header><div><b>Study advisor</b><small>Guidance based on the live course catalogue</small></div><button onClick={() => setOpen(false)} aria-label="Close advisor">×</button></header><div className="advisor-messages" aria-live="polite">{messages.map((item, index) => <p key={index} className={item.from}>{item.text}</p>)}<div ref={messagesEndRef}/></div><div className="advisor-suggestions"><button onClick={() => reply("Recommend technology courses")}>Explore technology</button><button onClick={() => reply("Which courses are available in Canada?")}>Courses in Canada</button><button onClick={() => reply("How do I apply?")}>How to apply</button></div><form onSubmit={e => { e.preventDefault(); reply(message); }}><input value={message} onChange={e => setMessage(e.target.value)} placeholder="Ask about your study plans..."/><button aria-label="Send message"><Send size={15}/></button></form></section>}
     {!open && <button className="advisor-launcher" onClick={() => setOpen(true)} aria-label="Open study advisor"><MessageCircle size={18}/> Study advisor</button>}
   </>;
 }
