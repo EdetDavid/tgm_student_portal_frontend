@@ -660,14 +660,15 @@ export default function Admin({ onStudent }) {
     setEditorError("");
     setNotice("");
     try {
-      await api(`/api/admin/${type}s/${editing ? editing.item.id + "/" : ""}`, {
+      const resourcePath = type === "university" ? "universities" : `${type}s`;
+      await api(`/api/admin/${resourcePath}/${editing ? editing.item.id + "/" : ""}`, {
         method: editing ? "PATCH" : "POST",
         body: JSON.stringify(values),
       });
       if (editing) setEditor(null);
       else form.reset();
       setNotice(
-        `${type === "course" ? "Course" : "Event"} ${editing ? "updated" : "added"}`,
+        `${type === "university" ? "University" : type === "course" ? "Course" : "Event"} ${editing ? "updated" : "added"}`,
       );
       await refresh();
     } catch (error) {
