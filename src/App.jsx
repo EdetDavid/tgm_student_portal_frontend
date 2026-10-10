@@ -48,27 +48,55 @@ export default function App() {
   const [showAdmin, setShowAdmin] = useState(["/portal", "/admin"].includes(window.location.pathname.replace(/\/$/, "")));
   const [authenticated, setAuthenticated] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
+  const [authError, setAuthError] = useState("");
+  const [routeRevision, setRouteRevision] = useState(0);
   useEffect(() => {
-    const syncRoute = () => setShowAdmin(["/portal", "/admin"].includes(window.location.pathname.replace(/\/$/, "")));
+    const syncRoute = () => {
+      setAuthChecking(true);
+      setShowAdmin(["/portal", "/admin"].includes(window.location.pathname.replace(/\/$/, "")));
+      setRouteRevision(value => value + 1);
+    };
+    const restorePage = event => { if (event.persisted) syncRoute(); };
     window.addEventListener("popstate", syncRoute);
-    return () => window.removeEventListener("popstate", syncRoute);
+    window.addEventListener("pageshow", restorePage);
+    return () => {
+      window.removeEventListener("popstate", syncRoute);
+      window.removeEventListener("pageshow", restorePage);
+    };
   }, []);
   useEffect(() => {
-    if (showAdmin) { setAuthChecking(false); return; }
-    api("/api/auth/me/").then(user => {
+    const controller = new AbortController();
+    setAuthChecking(true);
+    setAuthError("");
+    api("/api/auth/me/", { signal: controller.signal }).then(user => {
+      if (controller.signal.aborted) return;
+      const staffRoute = user.role !== "Student";
+      if (staffRoute !== showAdmin) {
+        window.history.replaceState({}, "", staffRoute ? "/portal" : "/");
+        setShowAdmin(staffRoute);
+      }
+      setAuthenticated(!staffRoute);
       if (user.role === "Student") {
         const profile = JSON.parse(localStorage.getItem("student_profile") || "{}");
         localStorage.setItem("student_profile", JSON.stringify({ ...profile, full_name: user.full_name || profile.full_name, email: user.email || profile.email }));
         setAuthenticated(true);
       }
-    }).catch(() => {}).finally(() => setAuthChecking(false));
-  }, [showAdmin]);
+    }).catch(error => {
+      if (controller.signal.aborted) return;
+      setAuthenticated(false);
+      if (error.status !== 401 && error.status !== 403) setAuthError(error.message);
+    }).finally(() => { if (!controller.signal.aborted) setAuthChecking(false); });
+    return () => controller.abort();
+  }, [showAdmin, routeRevision]);
   function navigate(path) {
-    window.history.pushState({}, "", path);
+    window.history.replaceState({}, "", path);
+    setAuthChecking(true);
     setShowAdmin(["/portal", "/admin"].includes(path));
+    setRouteRevision(value => value + 1);
   }
-  if (showAdmin) return <Admin onStudent={() => navigate("/")} darkMode={darkMode} onToggleTheme={toggleTheme} />;
   if (authChecking) return <main className={`portal-entry theme-surface ${darkMode ? "theme-dark" : ""}`}><LoadingIndicator label="Restoring your session" /></main>;
+  if (authError) return <main className={`portal-entry theme-surface ${darkMode ? "theme-dark" : ""}`}><section className="portal-entry-card"><h1>Unable to restore your session</h1><p role="alert">{authError}</p><button className="entry-primary" onClick={() => setRouteRevision(value => value + 1)}>Try again</button></section></main>;
+  if (showAdmin) return <Admin key={routeRevision} onStudent={() => navigate("/")} darkMode={darkMode} onToggleTheme={toggleTheme} />;
   if (!authenticated) return <PortalEntry onContinue={() => setAuthenticated(true)} onAdmin={() => navigate("/portal")} darkMode={darkMode} onToggleTheme={toggleTheme} />;
   return <StudentDashboard darkMode={darkMode} onToggleTheme={toggleTheme} onLogout={async () => { await api("/api/auth/logout/", { method: "POST", body: "{}" }).catch(() => {}); setAuthenticated(false); }}><StudentPortal /></StudentDashboard>;
 }
