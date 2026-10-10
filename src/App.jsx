@@ -135,23 +135,147 @@ function StudentDashboard({ children, onLogout }) {
   </div>;
 }
 
+const ADVISOR_STOP_WORDS = new Set("a an and are about after all am at be can could do for from get give going have how i in is it me my of on or our please recommend should tell that the their them there these this to want what where which with would you your study course courses university universities country destination fee price cost tuition intake apply application application status".split(" "));
+const STUDY_SYNONYMS = {
+  coding: ["software", "computer", "programming"], programmer: ["software", "computer", "programming"], developer: ["software", "computer", "programming"],
+  technology: ["computer", "software", "data", "cyber", "artificial intelligence"], tech: ["computer", "software", "data", "cyber"],
+  ai: ["artificial intelligence", "data"], "machine learning": ["artificial intelligence", "data"],
+  doctor: ["medicine", "health", "biomedical"], healthcare: ["health", "public health", "biomedical"],
+  money: ["finance", "accounting", "economics"], manager: ["management", "project management", "business"],
+  lawyer: ["law", "international relations"], designer: ["architecture", "media", "communications"],
+};
+
+function advisorTokens(text) {
+  return text.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/)
+    .filter(token => token.length > 2 && !ADVISOR_STOP_WORDS.has(token));
+}
+
+function formatNaira(amount) {
+  const value = Number(amount);
+  return Number.isFinite(value) ? new Intl.NumberFormat("en-NG", {
+    style: "currency", currency: "NGN", maximumFractionDigits: 0,
+  }).format(value) : "Ask a counsellor for the current fee";
+}
+
+function recommendCourses(question, courses) {
+  const normalized = question.toLowerCase();
+  const exact = courses.find(course => normalized.includes(course.name.toLowerCase()));
+  if (exact) return [exact];
+  const tokens = advisorTokens(question);
+  const expanded = new Set(tokens);
+  for (const [signal, related] of Object.entries(STUDY_SYNONYMS)) {
+    if (normalized.includes(signal)) related.forEach(term => advisorTokens(term).forEach(token => expanded.add(token)));
+  }
+  if (!expanded.size) return [];
+  return courses.map(course => {
+    const terms = advisorTokens(`${course.name} ${course.level}`);
+    const score = terms.reduce((total, term) => total + (expanded.has(term) ? 2 : 0), 0);
+    return { course, score };
+  }).filter(item => item.score > 0).sort((a, b) => b.score - a.score || a.course.name.localeCompare(b.course.name))
+    .slice(0, 3).map(item => item.course);
+}
+
 function StudentSupport() {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([{ from: "bot", text: "Hi! I can help you think through a course, programme type or study destination." }]);
+  const [catalogue, setCatalogue] = useState({ courses: [], events: [], destinations: [] });
+  const [catalogueReady, setCatalogueReady] = useState(false);
+  const [lastSuggestedCourses, setLastSuggestedCourses] = useState([]);
+  const [messages, setMessages] = useState([{ from: "bot", text: "Hi! Tell me what you’d like to study, where you’re considering, or what you want to know about applying. I’ll use the courses and partner locations currently listed in the portal." }]);
+
+  useEffect(() => {
+    let current = true;
+    Promise.all([api("/api/courses/"), api("/api/events/"), api("/api/options/")])
+      .then(([courses, events, options]) => {
+        if (current) setCatalogue({
+          courses: courses.courses || [], events: events.events || [],
+          destinations: options.destination || [],
+        });
+      })
+      .catch(() => {})
+      .finally(() => { if (current) setCatalogueReady(true); });
+    return () => { current = false; };
+  }, []);
+
+  function buildAnswer(question, previousMatches = []) {
+    const text = question.toLowerCase();
+    const recommendations = recommendCourses(question, catalogue.courses);
+    const relevantCourses = recommendations.length ? recommendations : previousMatches;
+    const looksLikeCourseQuestion = /course|study|programme|program|career|recommend|like|interested|degree|major/.test(text);
+    if (/(application status|track|reference|submitted)/.test(text)) {
+      const reference = localStorage.getItem("student_application_reference");
+      const application = JSON.parse(localStorage.getItem("student_application_details") || "null");
+      return reference
+        ? `I found your saved submission ${reference}. It is recorded as an interest submission${application?.course_name ? ` for ${application.course_name}` : ""}. Open Application status in your dashboard for the details. A counsellor will follow up; I can’t see live admission or visa decisions here.`
+        : "I don’t see a submission saved in this browser yet. Sign in, submit an application from Apply, and you’ll receive a reference you can use in Application status.";
+    }
+    if (/(visa|passport|transcript|document|admission|scholarship)/.test(text)) {
+      return "A counsellor needs to confirm requirements for your chosen university, course and destination, since document and visa rules vary. Submit your interest so the team can advise you, or use WhatsApp support for a direct question. I can help compare courses and partner locations meanwhile.";
+    }
+    if (/(event|exhibition|meet|attend)/.test(text)) {
+      const upcoming = catalogue.events.slice(0, 3).map(event => `${event.name} in ${event.city} (${event.date})`);
+      return upcoming.length ? `Upcoming events currently listed: ${upcoming.join("; ")}. You can choose one when submitting your interest.` : "There are no upcoming events listed right now. You can still submit your interest, and a counsellor can help with next steps.";
+    }
+    const destination = catalogue.destinations.find(item => text.includes(item.toLowerCase()));
+    if (destination && !recommendations.length) {
+      const matching = catalogue.courses.filter(course => (course.offerings || []).some(item => item.country.toLowerCase() === destination.toLowerCase()));
+      return matching.length
+        ? `Courses with partner locations in ${destination}:\n${matching.slice(0, 8).map(course => {
+          const locations = course.offerings.filter(item => item.country.toLowerCase() === destination.toLowerCase()).map(item => `${item.institution}, ${item.city}`).join("; ");
+          return `• ${course.name} — ${locations}`;
+        }).join("\n")}\nOpen Apply to compare the full course details and listed fees.`
+        : `I don’t see partner locations in ${destination} in the current catalogue. The available destinations can change, so check Apply for the latest options.`;
+    }
+    if (/(university|universit)/.test(text) && relevantCourses.length) {
+      return relevantCourses.map(course => {
+        const options = course.offerings || [];
+        return options.length
+          ? `${course.name}: ${options.map(item => `${item.institution} (${item.city}, ${item.country}; ${formatNaira(item.price || course.price)}/year)`).join("; ")}`
+          : `${course.name}: no partner university is listed yet.`;
+      }).join("\n");
+    }
+    if (/(country|countries|destination|where can|location|university|universit)/.test(text) && !recommendations.length) {
+      const locations = [...new Set(catalogue.courses.flatMap(course => (course.offerings || []).map(item => `${item.country}${item.city ? ` — ${item.city}` : ""}`)))].sort();
+      return locations.length
+        ? `Partner locations currently available in the course catalogue: ${locations.join("; ")}. Select a course to see which universities offer it, then choose a location on the application form.`
+        : "Partner locations will appear here when they’re available in the catalogue. Choose a course first to see its university options.";
+    }
+    if (/(fee|fees|price|tuition|cost|how much)/.test(text) && relevantCourses.length) {
+      return `Here are the matching catalogue entries and listed annual fees:\n${relevantCourses.map(course => `• ${course.name} — ${formatNaira(course.price)} per year`).join("\n")}\nFees can vary by university and destination; confirm the final amount with a counsellor.`;
+    }
+    if (/(intake|start|when can i begin)/.test(text) && relevantCourses.length) {
+      return relevantCourses.map(course => `${course.name}: ${(course.intake_options || course.intakes || []).join(", ") || "Ask a counsellor for available intakes"}`).join("\n");
+    }
+    if (looksLikeCourseQuestion || recommendations.length) {
+      if (!catalogueReady) return "I’m loading the current course catalogue. Please try that question again in a moment.";
+      if (!recommendations.length) {
+        const examples = catalogue.courses.slice(0, 5).map(course => course.name).join(", ");
+        return catalogue.courses.length
+          ? `I couldn’t match that interest confidently to a course name. What subjects do you enjoy or what kind of work are you aiming for? Courses currently listed include ${examples}.`
+          : "I can’t reach the course catalogue just now. Please try again shortly or browse Apply; WhatsApp support can also help.";
+      }
+      return `These catalogue courses look like a useful starting point:\n${recommendations.map(course => {
+        const offering = (course.offerings || [])[0];
+        const where = offering ? ` — e.g. ${offering.institution}, ${offering.city}, ${offering.country}` : "";
+        return `• ${course.name} (${course.level}) — ${formatNaira(course.price)}/year${where}`;
+      }).join("\n")}\nThis is a starting point, not an admissions assessment. Open Apply to compare all partner options.`;
+    }
+    if (/(apply|application|start)/.test(text)) return "To apply, open Apply in your student dashboard, choose a course, compare its partner universities, then select a programme type, intake, destination and event. Your profile details are filled in for you, and the form gives you a reference after submission.";
+    return "I can recommend courses from the live catalogue, compare partner locations and listed fees, show available intakes, explain how to submit an application, or help you find an event. What subject or destination are you considering?";
+  }
+
   function reply(text) {
-    const value = text.trim(); if (!value) return;
-    const lower = value.toLowerCase();
-    let answer = "A good next step is to search the course catalogue, choose your programme type, then compare the countries and cities where you would like to study.";
-    if (lower.includes("cyber") || lower.includes("technology") || lower.includes("data")) answer = "For a technology path, start with Cyber Security, Data Science or Artificial Intelligence. Choose Undergraduate for a first degree or Postgraduate if you already have a related degree.";
-    else if (lower.includes("business") || lower.includes("finance")) answer = "For a business path, compare Business Management, Accounting and Finance, and Project Management. Your preferred intake and destination can be selected separately.";
-    else if (lower.includes("visa") || lower.includes("document")) answer = "Our counsellors can guide you through documents and visa steps after you submit your interest. Keep your passport and academic records ready.";
-    else if (lower.includes("country") || lower.includes("where")) answer = "You can choose the course first and then select the country and city independently. Popular options include the UK, Canada, Australia, Ireland and the United States.";
-    setMessages(current => [...current, { from: "user", text: value }, { from: "bot", text: answer }]); setMessage("");
+    const value = text.trim();
+    if (!value) return;
+    const directMatches = recommendCourses(value, catalogue.courses);
+    if (directMatches.length) setLastSuggestedCourses(directMatches);
+    const answer = buildAnswer(value, lastSuggestedCourses);
+    setMessages(current => [...current, { from: "user", text: value }, { from: "bot", text: answer }]);
+    setMessage("");
   }
   return <>
     <a className="whatsapp-support" href={`https://wa.me/${import.meta.env.VITE_WHATSAPP_NUMBER || "2348000000000"}?text=Hello%20TGM%20Education%2C%20I%20need%20help%20with%20studying%20abroad.`} target="_blank" rel="noreferrer"><MessageCircle size={18}/> WhatsApp support</a>
-    {open && <section className="advisor-panel" aria-label="Student advisor"><header><div><b>Study advisor</b><small>Course and destination guidance</small></div><button onClick={() => setOpen(false)} aria-label="Close advisor">×</button></header><div className="advisor-messages">{messages.map((item, index) => <p key={index} className={item.from}>{item.text}</p>)}</div><div className="advisor-suggestions"><button onClick={() => reply("Which course suits technology?")}>Technology courses</button><button onClick={() => reply("Which country should I choose?")}>Choose a country</button><button onClick={() => reply("What documents do I need?")}>Visa guidance</button></div><form onSubmit={e => { e.preventDefault(); reply(message); }}><input value={message} onChange={e => setMessage(e.target.value)} placeholder="Ask about your study plans..."/><button aria-label="Send message"><Send size={15}/></button></form></section>}
+    {open && <section className="advisor-panel" aria-label="Student advisor"><header><div><b>Study advisor</b><small>Guidance based on the live course catalogue</small></div><button onClick={() => setOpen(false)} aria-label="Close advisor">×</button></header><div className="advisor-messages" aria-live="polite">{messages.map((item, index) => <p key={index} className={item.from}>{item.text}</p>)}</div><div className="advisor-suggestions"><button onClick={() => reply("Recommend technology courses")}>Explore technology</button><button onClick={() => reply("Which courses are available in Canada?")}>Courses in Canada</button><button onClick={() => reply("How do I apply?")}>How to apply</button></div><form onSubmit={e => { e.preventDefault(); reply(message); }}><input value={message} onChange={e => setMessage(e.target.value)} placeholder="Ask about your study plans..."/><button aria-label="Send message"><Send size={15}/></button></form></section>}
     {!open && <button className="advisor-launcher" onClick={() => setOpen(true)} aria-label="Open study advisor"><MessageCircle size={18}/> Study advisor</button>}
   </>;
 }
@@ -176,6 +300,9 @@ function StudentPortal() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [intake, setIntake] = useState("");
+  const [programmeType, setProgrammeType] = useState("");
+  const [eventId, setEventId] = useState("");
+  const [applicationStep, setApplicationStep] = useState(1);
   const [matches, setMatches] = useState([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
@@ -232,26 +359,60 @@ function StudentPortal() {
   const visible = region ? sourceCourses.filter(course => (course.offerings || []).some(item => item.region === region)) : sourceCourses;
   const regions = portalOptions.region.length ? portalOptions.region : [...new Set(courses.flatMap(course => (course.offerings || []).map(item => item.region)))].sort();
   const chosen = matches.find((c) => String(c.id) === String(courseId)) || courses.find((c) => String(c.id) === String(courseId));
+  const selectedOffering = chosen?.offerings?.find(item => String(item.id) === String(universityId));
+  const formData = {
+    ...formValues,
+    course_id: courseId,
+    university_id: universityId,
+    programme_type: programmeType,
+    intake,
+    destination,
+    destination_city: destinationCity,
+    event_id: eventId,
+  };
+  function validateStep(step) {
+    const validation = validateStudentInquiry(formData, [...matches, ...courses], events, {
+      destinations: portalOptions.destination,
+      programmeTypes: portalOptions.programme_type,
+    });
+    if (chosen?.offerings?.length && !universityId) {
+      validation.university_id = "Choose a university where you would like to study.";
+    }
+    const fieldsByStep = {
+      1: ["full_name", "email", "phone", "student_location"],
+      2: ["course_id", "university_id"],
+      3: ["programme_type", "intake", "destination", "destination_city", "event_id", "message"],
+      4: Object.keys(validation),
+    };
+    const messages = fieldsByStep[step].filter(field => validation[field]).map(field => validation[field]);
+    if (messages.length) {
+      setError(messages.join(" "));
+      return false;
+    }
+    setError("");
+    return true;
+  }
+  function continueApplication() {
+    if (validateStep(applicationStep)) {
+      setApplicationStep(current => Math.min(4, current + 1));
+      document.querySelector(".form-wrap")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
   async function submit(e) {
     e.preventDefault();
     setError("");
     setResult(null);
-    const formElement = e.currentTarget;
-    const form = new FormData(formElement);
-    const data = Object.fromEntries(form.entries());
-    data.course_id = Number(data.course_id);
-    data.event_id = Number(data.event_id);
-    data.university_id = universityId ? Number(universityId) : null;
-    if (chosen?.offerings?.length && !universityId) {
-      setError("Choose a university where you would like to study.");
-      return;
-    }
+    const data = { ...formData, course_id: Number(courseId), event_id: Number(eventId), university_id: universityId ? Number(universityId) : null };
     const validation = validateStudentInquiry(data, [...matches, ...courses], events, {
       destinations: portalOptions.destination,
       programmeTypes: portalOptions.programme_type,
     });
+    if (chosen?.offerings?.length && !universityId) validation.university_id = "Choose a university where you would like to study.";
     if (Object.keys(validation).length) {
       setError(Object.values(validation).join(" "));
+      if (["full_name", "email", "phone", "student_location"].some(field => validation[field])) setApplicationStep(1);
+      else if (validation.course_id || validation.university_id) setApplicationStep(2);
+      else setApplicationStep(3);
       return;
     }
     setBusy(true);
@@ -264,14 +425,16 @@ function StudentPortal() {
       localStorage.setItem("student_application_reference", body.reference);
       localStorage.setItem("student_profile", JSON.stringify({ full_name: data.full_name, email: data.email, phone: data.phone, student_location: data.student_location }));
       localStorage.setItem("student_application_details", JSON.stringify({ ...data, course_name: chosen?.name, event_name: events.find(item => String(item.id) === String(data.event_id))?.name }));
-      formElement.reset();
       setFormValues({ full_name: "", email: "", phone: "", student_location: "", message: "" });
       setCourseId("");
       setUniversityId("");
       setDestination("");
       setDestinationCity("");
       setIntake("");
+      setProgrammeType("");
+      setEventId("");
       setQuery("");
+      setApplicationStep(1);
       setCourseListOpen(false);
       document.querySelector(".form-wrap")?.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (error) {
@@ -347,6 +510,7 @@ function StudentPortal() {
             </div>
           </div>
         </section>
+        <div className="application-layout">
         <section className="form-wrap">
           <div className="form-intro">
             <div>
@@ -354,12 +518,11 @@ function StudentPortal() {
                 STUDENT INTEREST FORM <span>•</span> 2 MIN
               </div>
             </div>
-            <div className="progress">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
+            <span className="step-count">Step {applicationStep} of 4</span>
           </div>
+          <nav className="application-stepper" aria-label="Application progress">
+            {["Your details", "Course & university", "Study plans", "Review"].map((label, index) => <div key={label} className={`stepper-item${applicationStep === index + 1 ? " current" : applicationStep > index + 1 ? " complete" : ""}`} aria-current={applicationStep === index + 1 ? "step" : undefined}><span>{applicationStep > index + 1 ? <Check size={13}/> : `0${index + 1}`}</span><b>{label}</b></div>)}
+          </nav>
           {result && (
             <div className="success" role="status">
               <div className="success-icon">
@@ -395,7 +558,8 @@ function StudentPortal() {
           {loading && <LoadingIndicator label="Loading courses and events" />}
           {loadError && <div className="error" role="alert">{loadError} <button type="button" onClick={() => loadOptions()}>Retry</button></div>}
           {!loading && !loadError && !events.length && <p className="error">No upcoming events are available yet. Please check back soon.</p>}
-          <form onSubmit={submit}>
+          <form onSubmit={submit} noValidate>
+            <div className="form-step" hidden={applicationStep !== 1}>
             <div className="section-heading">
               <span className="number">01</span>
               <div>
@@ -459,11 +623,13 @@ function StudentPortal() {
                 />
               </label>
             </div>
+            </div>
+            <div className="form-step" hidden={applicationStep !== 2}>
             <div className="section-heading course-heading">
               <span className="number">02</span>
               <div>
-                <b>Your study plans</b>
-                <small>What would you like to explore?</small>
+                <b>Choose a course</b>
+                <small>Compare programmes and the universities offering them.</small>
               </div>
             </div>
             <div className="course-search">
@@ -569,11 +735,17 @@ function StudentPortal() {
                 </div>
               </div>
             )}
+            </div>
+            <div className="form-step" hidden={applicationStep !== 3}>
+            <div className="section-heading plan-heading">
+              <span className="number">03</span>
+              <div><b>Set your study plans</b><small>Choose a programme, intake and destination.</small></div>
+            </div>
             <div className="grid two compact">
               <label>
                 Programme type<span className="required">*</span>
                 <div className="select-shell">
-                  <select name="programme_type" required defaultValue="">
+                  <select name="programme_type" required value={programmeType} onChange={e => setProgrammeType(e.target.value)}>
                     <option value="" disabled>Choose a programme type</option>
                     {portalOptions.programme_type.map(type => <option key={type}>{type}</option>)}
                   </select>
@@ -611,17 +783,11 @@ function StudentPortal() {
                 <input name="destination_city" required maxLength="100" placeholder="e.g. Toronto" value={destinationCity} onChange={e => setDestinationCity(e.target.value)} />
               </label>
             </div>
-            <div className="section-heading event-heading">
-              <span className="number">03</span>
-              <div>
-                <b>Meet us at an event</b>
-                <small>Pick the event you’re planning to attend.</small>
-              </div>
-            </div>
+            <div className="event-subheading"><b>Meet us at an event</b><small>Pick the event you’re planning to attend.</small></div>
             <label className="full-label">
               Event<span className="required">*</span>
               <div className="select-shell">
-                <select name="event_id" required defaultValue="">
+                <select name="event_id" required value={eventId} onChange={e => setEventId(e.target.value)}>
                   <option value="" disabled>
                     Select an upcoming event
                   </option>
@@ -650,18 +816,37 @@ function StudentPortal() {
                 placeholder="Tell us about your goals or ask a question..."
               ></textarea>
             </label>
+            </div>
+            <div className="form-step review-step" hidden={applicationStep !== 4}>
+              <div className="review-heading"><span className="number"><Check size={15}/></span><div><b>Review your application</b><small>Check these details before sending your interest.</small></div></div>
+              <div className="review-grid">
+                <article><small>YOUR DETAILS</small><b>{formValues.full_name || "Name not entered"}</b><span>{formValues.email || "Email not entered"}</span><span>{formValues.phone || "Phone not entered"}</span><span>{formValues.student_location || "Location not entered"}</span><button type="button" onClick={() => setApplicationStep(1)}>Edit details</button></article>
+                <article><small>COURSE & UNIVERSITY</small><b>{chosen?.name || "No course selected"}</b><span>{selectedOffering ? `${selectedOffering.institution} · ${selectedOffering.city}, ${selectedOffering.country}` : "Choose a partner university"}</span><span>{chosen ? `${money(selectedOffering?.price || chosen.price)} / year` : "Tuition shown after course selection"}</span><button type="button" onClick={() => setApplicationStep(2)}>Edit course</button></article>
+                <article><small>STUDY PLANS</small><b>{programmeType || "Programme type not selected"}</b><span>{intake || "Intake not selected"}</span><span>{destinationCity && destination ? `${destinationCity}, ${destination}` : "Destination not selected"}</span><span>{events.find(item => String(item.id) === String(eventId))?.name || "Event not selected"}</span><button type="button" onClick={() => setApplicationStep(3)}>Edit plans</button></article>
+              </div>
+              {formValues.message && <p className="review-note"><b>Your note:</b> {formValues.message}</p>}
+            </div>
             <div className="form-bottom">
               <p>
-                By submitting, you agree that TGM Education may contact you
-                about your study plans.
+                {applicationStep === 4 ? "By submitting, you agree that TGM Education may contact you about your study plans." : "Your progress stays in this form while you move between steps."}
               </p>
-              <button className="submit" type="submit" disabled={busy || loading || !!loadError || !courses.length || !events.length}>
-                {busy ? "Sending..." : "Send my interest"}{" "}
-                <ArrowRight size={17} />
-              </button>
+              <div className="form-actions">
+                {applicationStep > 1 && <button className="back-step" type="button" onClick={() => { setError(""); setApplicationStep(current => current - 1); }}>Back</button>}
+                {applicationStep < 4 ? <button className="submit" type="button" onClick={continueApplication}>Continue <ArrowRight size={17}/></button> : <button className="submit" type="submit" disabled={busy || loading || !!loadError || !courses.length || !events.length}>{busy ? "Sending..." : "Send my interest"} <ArrowRight size={17}/></button>}
+              </div>
             </div>
           </form>
         </section>
+        <aside className="application-summary" aria-label="Application summary">
+          <div className="summary-top"><span><ClipboardList size={17}/></span><div><b>Your application</b><small>Live summary</small></div></div>
+          <div className="summary-row"><small>Course</small><b>{chosen?.name || "Choose a course"}</b></div>
+          <div className="summary-row"><small>University</small><b>{selectedOffering?.institution || "Choose a partner location"}</b></div>
+          <div className="summary-row"><small>Destination</small><b>{destinationCity && destination ? `${destinationCity}, ${destination}` : "Select your study destination"}</b></div>
+          <div className="summary-row"><small>Intake</small><b>{intake || "Choose an available intake"}</b></div>
+          <div className="summary-total"><small>Estimated annual tuition</small><strong>{chosen ? money(selectedOffering?.price || chosen.price) : "—"}</strong><span>Final fees may vary by university.</span></div>
+          <p><ShieldCheck size={14}/> Your details are only used to support your study enquiry.</p>
+        </aside>
+        </div>
         <footer>
           <a className="brand footer-brand" href="#top">
             <span className="brand-mark">
