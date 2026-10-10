@@ -81,10 +81,18 @@ function PortalEntry({ onContinue, onAdmin, darkMode, onToggleTheme }) {
   const [busy, setBusy] = useState(false);
   const [showOrganisationCode, setShowOrganisationCode] = useState(false);
   const [showSuperAdminCode, setShowSuperAdminCode] = useState(false);
+  const isStudentSignup = mode === "signup" && role.trim().toLowerCase() === "student";
   async function submit(e) {
-    e.preventDefault(); setError(""); setBusy(true);
+    e.preventDefault(); setError("");
+    const fullName = form.full_name.trim();
+    const email = form.email.trim().toLowerCase();
+    if (isStudentSignup && (!fullName || !email)) {
+      setError("Please enter your full name and email address to create a student account.");
+      return;
+    }
+    setBusy(true);
     try {
-      const body = { ...form, role };
+      const body = { ...form, ...(isStudentSignup ? { full_name: fullName, email } : {}), role };
       const result = await api(mode === "signup" ? "/api/auth/signup/" : "/api/admin/login/", { method: "POST", body: JSON.stringify(body) });
       if (role === "Student") {
         const existing = JSON.parse(localStorage.getItem("student_profile") || "{}");
@@ -104,8 +112,10 @@ function PortalEntry({ onContinue, onAdmin, darkMode, onToggleTheme }) {
       <label>Continue as<select value={role} onChange={e => setRole(e.target.value)}><option>Student</option><option>Admin</option><option>Counsellor</option><option>Super Admin</option></select></label>
       <Toast message={error} type="error" onClose={() => setError("")} />
       <form onSubmit={submit} className="entry-form">
-        {mode === "signup" && role === "Student" && <label>Full name<input required value={form.full_name} onChange={e => setForm({...form, full_name:e.target.value})} /></label>}
-        {mode === "signup" && role === "Student" && <label>Email<input required type="email" value={form.email} onChange={e => setForm({...form, email:e.target.value})} /></label>}
+        {isStudentSignup && <div className="entry-identity-fields" aria-label="Student account details">
+          <label htmlFor="signup-full-name">Full name<input id="signup-full-name" name="full_name" autoComplete="name" required value={form.full_name} onChange={e => setForm({...form, full_name:e.target.value})} /></label>
+          <label htmlFor="signup-email">Email address<input id="signup-email" name="email" autoComplete="email" required type="email" value={form.email} onChange={e => setForm({...form, email:e.target.value})} /></label>
+        </div>}
         {mode === "signup" && ["Admin", "Counsellor"].includes(role) && <label>Staff ID<input required value={form.staff_id || ""} onChange={e => setForm({...form, staff_id:e.target.value})} /></label>}
         {mode === "signup" && ["Admin", "Counsellor"].includes(role) && <label>Organisation code<div className="secret-input-wrap"><input required type={showOrganisationCode ? "text" : "password"} value={form.organisation_code || ""} onChange={e => setForm({...form, organisation_code:e.target.value})} /><button type="button" className="secret-toggle" aria-label={showOrganisationCode ? "Hide organisation code" : "Show organisation code"} onClick={() => setShowOrganisationCode(value => !value)}>{showOrganisationCode ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></label>}
         {mode === "signup" && role === "Super Admin" && <label>Super Admin access code<div className="secret-input-wrap"><input required type={showSuperAdminCode ? "text" : "password"} value={form.access_code || ""} onChange={e => setForm({...form, access_code:e.target.value})} /><button type="button" className="secret-toggle" aria-label={showSuperAdminCode ? "Hide Super Admin access code" : "Show Super Admin access code"} onClick={() => setShowSuperAdminCode(value => !value)}>{showSuperAdminCode ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></label>}

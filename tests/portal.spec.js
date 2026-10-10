@@ -1,6 +1,27 @@
 import { test, expect } from '@playwright/test';
 
 test.describe.serial('Student and admin portal', () => {
+  test('student signup requires and submits full name and email', async ({ page }) => {
+    let signupPayload;
+    await page.route('**/api/auth/signup/', async route => {
+      signupPayload = route.request().postDataJSON();
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ role: 'Student', full_name: signupPayload.full_name, email: signupPayload.email }) });
+    });
+    await page.goto('/');
+    await page.getByRole('button', { name: /Create an account/ }).click();
+    await expect(page.getByRole('textbox', { name: 'Full name' })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Email address' })).toBeVisible();
+    await page.getByRole('textbox', { name: 'Full name' }).fill('  Amara Okafor  ');
+    await page.getByRole('textbox', { name: 'Email address' }).fill(' AMARA@example.com ');
+    await page.getByRole('textbox', { name: 'Username' }).fill('amara');
+    await page.getByLabel('Password', { exact: true }).fill('StrongPass123');
+    await page.getByRole('button', { name: 'Create account' }).click();
+    await expect.poll(() => signupPayload).toBeTruthy();
+    expect(signupPayload.full_name).toBe('Amara Okafor');
+    expect(signupPayload.email).toBe('amara@example.com');
+    expect(signupPayload.role).toBe('Student');
+  });
+
   test('typing, course search, submission reset, and duplicate confirmation', async ({ page }) => {
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
